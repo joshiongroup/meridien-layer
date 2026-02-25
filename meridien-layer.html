@@ -44,17 +44,51 @@ const C = {
   shadowMd:   '0 3px 8px rgba(9,30,66,0.16), 0 0 0 1px rgba(9,30,66,0.08)',
 };
 
-// Atlassian lozenge colors
 const STATUS_BG   = { 'on-track':'#E3FCEF', 'at-risk':'#FFFAE6', 'behind':'#FFEBE6' };
 const STATUS_TEXT = { 'on-track':'#006644', 'at-risk':'#FF8B00', 'behind':'#DE350B' };
 const PRI_BG      = { critical:'#FFEBE6', high:'#FFF0E6', medium:'#FFFAE6', low:'#EBECF0' };
 const PRI_TEXT    = { critical:'#DE350B', high:'#FF5630', medium:'#FF8B00', low:'#5E6C84' };
-const RISK_DOT    = { high:'#DE350B',  medium:'#FF8B00',  low:'#00875A' };
-const RISK_BG     = { high:'#FFEBE6',  medium:'#FFFAE6',  low:'#E3FCEF' };
-const RISK_TXT    = { high:'#DE350B',  medium:'#FF8B00',  low:'#006644' };
+const RISK_DOT    = { high:'#DE350B', medium:'#FF8B00', low:'#00875A' };
+const RISK_BG     = { high:'#FFEBE6', medium:'#FFFAE6', low:'#E3FCEF' };
+const RISK_TXT    = { high:'#DE350B', medium:'#FF8B00', low:'#006644' };
 
-const loadColor = p => p>=12?'#DE350B':p>=10?'#FF5630':p>=7?'#00875A':p>=4?'#0052CC':'#7A869A';
-const loadLabel = p => p>=12?'Critical':p>=10?'Overloaded':p>=7?'Optimal':p>=4?'Light':'Slack';
+const TICKET_STATUS = {
+  'To Do':       { bg:'#EBECF0', color:'#42526E' },
+  'In Progress': { bg:'#DEEBFF', color:'#0052CC' },
+  'In Review':   { bg:'#EAE6FF', color:'#6554C0' },
+  'Done':        { bg:'#E3FCEF', color:'#006644' },
+};
+const TICKET_PRI_COLOR = { Critical:'#DE350B', High:'#FF5630', Medium:'#FF8B00', Low:'#0052CC' };
+const TICKET_TYPE_COLOR = { Story:'#0052CC', Task:'#00875A', Bug:'#DE350B', Epic:'#6554C0' };
+
+const loadColor  = p => p>=12?'#DE350B':p>=10?'#FF5630':p>=7?'#00875A':p>=4?'#0052CC':'#7A869A';
+const loadLabel  = p => p>=12?'Critical':p>=10?'Overloaded':p>=7?'Optimal':p>=4?'Light':'Slack';
+const heatColor  = (status, pts) => {
+  if (status==='overloaded') return pts>=15?'#7F1D1D':pts>=12?'#991B1B':'#B91C1C';
+  if (status==='optimal')    return pts>=10?'#14532D':pts>=7?'#166534':'#15803D';
+  /* available */            return pts>=5?'#1E3A8A':pts>=3?'#1D4ED8':'#374151';
+};
+
+// ─── TREEMAP LAYOUT ───────────────────────────────────────────────────────────
+function treemapLayout(items, x, y, w, h) {
+  if (!items.length) return [];
+  if (items.length === 1) return [{ ...items[0], x, y, w, h }];
+  const total = items.reduce((s, i) => s + (i.v||1), 0);
+  let sum = 0, split = 0;
+  for (let i = 0; i < items.length; i++) {
+    sum += items[i].v || 1;
+    if (sum * 2 >= total) { split = i + 1; break; }
+  }
+  if (!split) split = Math.ceil(items.length / 2);
+  const r = items.slice(0, split).reduce((s, i) => s + (i.v||1), 0) / total;
+  if (w >= h) {
+    return [...treemapLayout(items.slice(0,split), x, y, w*r, h),
+            ...treemapLayout(items.slice(split),   x+w*r, y, w*(1-r), h)];
+  } else {
+    return [...treemapLayout(items.slice(0,split), x, y, w, h*r),
+            ...treemapLayout(items.slice(split),   x, y+h*r, w, h*(1-r))];
+  }
+}
 
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 const TEAMS = [
@@ -94,26 +128,118 @@ const ALIGNMENT = [
   { teamId:'andromeda', featureId:'f-007', issueCount:8,  storyPoints:32, status:'on-track' },
   { teamId:'orion',     featureId:'f-007', issueCount:5,  storyPoints:19, status:'on-track' },
 ];
+
+// ─── ENRICHED DUPLICATES ──────────────────────────────────────────────────────
 const DUPLICATES = [
   { id:'d-001', score:0.89, reasons:['title','labels','epic'],
-    issueA:{ key:'ORI-234', summary:'Implement SSO authentication flow with SAML 2.0', teamId:'orion',     assignee:'Liam Torres',   type:'Story' },
-    issueB:{ key:'AND-189', summary:'Build SSO login integration for web frontend',    teamId:'andromeda', assignee:'Nina Park',     type:'Story' } },
+    issueA:{ key:'ORI-234', type:'Story', status:'In Progress', priority:'High', storyPoints:8,
+      summary:'Implement SSO authentication flow with SAML 2.0',
+      teamId:'orion', assignee:'Liam Torres', reporter:'Sarah Chen',
+      sprint:'Sprint 42', epic:'Auth & SSO Overhaul',
+      labels:['sso','saml','backend','security'],
+      components:['Auth Service','User Management'],
+      created:'2026-02-03',
+      description:'Implement the complete SAML 2.0 SSO flow including IdP metadata parsing, assertion validation, and session management. Must support both SP-initiated and IdP-initiated flows, with proper error handling and audit logging for all authentication events.' },
+    issueB:{ key:'AND-189', type:'Story', status:'In Review', priority:'High', storyPoints:5,
+      summary:'Build SSO login integration for web frontend',
+      teamId:'andromeda', assignee:'Nina Park', reporter:'Marcus Webb',
+      sprint:'Sprint 42', epic:'Auth & SSO Overhaul',
+      labels:['sso','frontend','auth-ui','oauth'],
+      components:['Login Flow','Web App Shell'],
+      created:'2026-02-05',
+      description:'Build the frontend integration for SSO login including the OAuth redirect flow, token storage in secure cookies, and session persistence across page reloads. Handle error states, expired sessions, and redirect loops gracefully with user-friendly messaging.' } },
+
   { id:'d-002', score:0.84, reasons:['title','components'],
-    issueA:{ key:'ORI-198', summary:'Push notification delivery service via WebSocket',teamId:'orion',     assignee:'Ravi Krishnan',type:'Story' },
-    issueB:{ key:'VEG-067', summary:'WebSocket notification broadcast infrastructure', teamId:'vega',      assignee:'Carlos Lima',  type:'Story' } },
+    issueA:{ key:'ORI-198', type:'Story', status:'In Progress', priority:'High', storyPoints:13,
+      summary:'Push notification delivery service via WebSocket',
+      teamId:'orion', assignee:'Ravi Krishnan', reporter:'Sarah Chen',
+      sprint:'Sprint 42', epic:'Real-time Notifications',
+      labels:['websocket','notifications','backend','realtime'],
+      components:['Notification Queue','WebSocket Gateway'],
+      created:'2026-01-28',
+      description:'Build a scalable WebSocket-based push notification delivery service capable of handling 10k+ concurrent connections. Implement message queuing with acknowledgement, delivery receipts, and automatic retry logic for failed deliveries with exponential backoff.' },
+    issueB:{ key:'VEG-067', type:'Story', status:'To Do', priority:'High', storyPoints:10,
+      summary:'WebSocket notification broadcast infrastructure',
+      teamId:'vega', assignee:'Carlos Lima', reporter:'Ana Sousa',
+      sprint:'Sprint 42', epic:'Real-time Notifications',
+      labels:['websocket','infrastructure','devops','broadcast'],
+      components:['Notification Queue','Load Balancer'],
+      created:'2026-02-01',
+      description:'Set up the WebSocket broadcast infrastructure including load balancing with sticky sessions and horizontal scaling support. Design the message routing architecture for multi-region notification delivery with sub-100ms latency SLA.' } },
+
   { id:'d-003', score:0.82, reasons:['title','labels'],
-    issueA:{ key:'ORI-301', summary:'Rate limiting middleware for REST API endpoints', teamId:'orion',     assignee:'Sarah Chen',   type:'Task'  },
-    issueB:{ key:'VEG-112', summary:'API throttling and rate limit configuration',     teamId:'vega',      assignee:'Ana Sousa',   type:'Story' } },
+    issueA:{ key:'ORI-301', type:'Task', status:'Done', priority:'High', storyPoints:5,
+      summary:'Rate limiting middleware for REST API endpoints',
+      teamId:'orion', assignee:'Sarah Chen', reporter:'Sarah Chen',
+      sprint:'Sprint 41', epic:'API Rate Limiting',
+      labels:['rate-limiting','middleware','api','backend'],
+      components:['API Gateway','Auth Service'],
+      created:'2026-01-15',
+      description:'Implement configurable rate limiting middleware for all REST API endpoints using a sliding window algorithm with Redis-backed counters. Support per-user, per-IP, and per-endpoint limit tiers with graceful 429 responses including Retry-After headers.' },
+    issueB:{ key:'VEG-112', type:'Story', status:'In Progress', priority:'High', storyPoints:8,
+      summary:'API throttling and rate limit configuration',
+      teamId:'vega', assignee:'Ana Sousa', reporter:'Carlos Lima',
+      sprint:'Sprint 42', epic:'API Rate Limiting',
+      labels:['rate-limiting','devops','nginx','config'],
+      components:['API Gateway','Nginx Config'],
+      created:'2026-01-22',
+      description:'Configure API throttling rules at the infrastructure level using Nginx rate limiting and custom Lua scripts. Define global rate limit policies, implement zone-based limits, and build a dynamic configuration API that allows updating limits without service restarts.' } },
+
   { id:'d-004', score:0.77, reasons:['title','components','epic'],
-    issueA:{ key:'AND-244', summary:'Analytics chart widgets with drill-down support', teamId:'andromeda', assignee:'Marcus Webb',  type:'Story' },
-    issueB:{ key:'LYR-078', summary:'Interactive analytics chart components library',  teamId:'lyra',      assignee:'Zoe Fischer',  type:'Story' } },
+    issueA:{ key:'AND-244', type:'Story', status:'In Progress', priority:'Medium', storyPoints:8,
+      summary:'Analytics chart widgets with drill-down support',
+      teamId:'andromeda', assignee:'Marcus Webb', reporter:'Marcus Webb',
+      sprint:'Sprint 42', epic:'Analytics Dashboard',
+      labels:['analytics','charts','frontend','ux','recharts'],
+      components:['React Component Lib','Dashboard'],
+      created:'2026-02-06',
+      description:'Build reusable chart widget components (bar, line, pie, scatter, area) with interactive drill-down capability using click-to-filter. Charts should support real-time data updates via WebSocket subscriptions and export to PNG and CSV formats.' },
+    issueB:{ key:'LYR-078', type:'Story', status:'In Progress', priority:'Medium', storyPoints:10,
+      summary:'Interactive analytics chart components library',
+      teamId:'lyra', assignee:'Zoe Fischer', reporter:'James Okafor',
+      sprint:'Sprint 42', epic:'Analytics Dashboard',
+      labels:['analytics','charts','d3','data-viz','library'],
+      components:['React Component Lib','Data Pipeline'],
+      created:'2026-02-08',
+      description:'Create a shared chart components library with D3-powered visualizations including time series, histograms, funnel charts and heatmaps. Include WCAG 2.1 accessibility support, design token theming, and data transformation utilities for streaming datasets.' } },
+
   { id:'d-005', score:0.73, reasons:['title','epic'],
-    issueA:{ key:'PEG-156', summary:'Offline data sync queue for mobile app',          teamId:'pegasus',   assignee:'Priya Nair',   type:'Story' },
-    issueB:{ key:'AND-301', summary:'Client-side data caching for offline mode',       teamId:'andromeda', assignee:'Dev Sharma',   type:'Story' } },
+    issueA:{ key:'PEG-156', type:'Story', status:'To Do', priority:'Medium', storyPoints:10,
+      summary:'Offline data sync queue for mobile app',
+      teamId:'pegasus', assignee:'Priya Nair', reporter:'Priya Nair',
+      sprint:'Sprint 43', epic:'Mobile Offline Support',
+      labels:['offline','sync','mobile','queue','react-native'],
+      components:['Mobile App','Sync Service'],
+      created:'2026-02-10',
+      description:'Implement an offline data sync queue for the React Native mobile app that persists user actions in SQLite locally and syncs them to the backend using CRDT-based conflict resolution when connectivity is restored. Include a sync status UI indicator.' },
+    issueB:{ key:'AND-301', type:'Story', status:'In Progress', priority:'Medium', storyPoints:6,
+      summary:'Client-side data caching for offline mode',
+      teamId:'andromeda', assignee:'Dev Sharma', reporter:'Marcus Webb',
+      sprint:'Sprint 42', epic:'Mobile Offline Support',
+      labels:['offline','caching','service-worker','pwa','indexeddb'],
+      components:['Web App Shell','Service Worker'],
+      created:'2026-02-04',
+      description:'Implement client-side data caching using Service Worker intercepts and IndexedDB storage to enable offline mode for the web PWA. Cache critical API responses with TTL policies and implement Background Sync API for queued mutations when back online.' } },
+
   { id:'d-006', score:0.69, reasons:['title','labels'],
-    issueA:{ key:'ORI-412', summary:'User session token refresh and revocation',       teamId:'orion',     assignee:'Liam Torres',  type:'Task'  },
-    issueB:{ key:'AND-378', summary:'Frontend token refresh and session management',   teamId:'andromeda', assignee:'Nina Park',    type:'Task'  } },
+    issueA:{ key:'ORI-412', type:'Task', status:'In Progress', priority:'High', storyPoints:5,
+      summary:'User session token refresh and revocation logic',
+      teamId:'orion', assignee:'Liam Torres', reporter:'Sarah Chen',
+      sprint:'Sprint 42', epic:'Auth & SSO Overhaul',
+      labels:['auth','tokens','security','session','redis'],
+      components:['Auth Service','Token Store'],
+      created:'2026-02-07',
+      description:'Implement automatic JWT token refresh using rotating refresh tokens stored in Redis with TTL. Add token revocation support triggered by logout, password change, and suspicious activity events, with immediate propagation across all microservices via pub/sub.' },
+    issueB:{ key:'AND-378', type:'Task', status:'To Do', priority:'High', storyPoints:3,
+      summary:'Frontend token refresh and session management',
+      teamId:'andromeda', assignee:'Nina Park', reporter:'Marcus Webb',
+      sprint:'Sprint 42', epic:'Auth & SSO Overhaul',
+      labels:['auth','tokens','frontend','session','axios'],
+      components:['Web App Shell','Auth Interceptor'],
+      created:'2026-02-09',
+      description:'Implement silent token refresh in the frontend using axios request/response interceptors. Handle 401 responses by queuing concurrent failed requests, refreshing the access token once, then replaying all queued requests. Add session timeout warnings at 5-minute intervals.' } },
 ];
+
 const DEPENDENCIES = [
   { id:'dep-001', name:'Auth Service',            type:'service',  teams:['orion','andromeda','pegasus'], issueCount:28, riskLevel:'high'   },
   { id:'dep-002', name:'Notification Queue',      type:'queue',    teams:['orion','vega','andromeda'],    issueCount:17, riskLevel:'high'   },
@@ -124,31 +250,88 @@ const DEPENDENCIES = [
   { id:'dep-007', name:'S3 Object Storage',       type:'storage',  teams:['lyra','vega'],                issueCount:8,  riskLevel:'low'    },
   { id:'dep-008', name:'Payment API (Stripe)',    type:'service',  teams:['orion','andromeda'],          issueCount:14, riskLevel:'high'   },
 ];
+
 const SPRINTS = {
   42: {
     id:42, name:'Sprint 42', state:'active', start:'2026-02-10', end:'2026-02-24',
     teams:{
-      orion:     { total:78, done:41, members:[{n:'Sarah Chen',av:'SC',pts:18,status:'overloaded'},{n:'Liam Torres',av:'LT',pts:16,status:'overloaded'},{n:'Ravi Krishnan',av:'RK',pts:15,status:'overloaded'},{n:'Mei Nakamura',av:'MN',pts:12,status:'optimal'},{n:'Tom Bradley',av:'TB',pts:10,status:'optimal'},{n:'Kat Diaz',av:'KD',pts:7,status:'optimal'}] },
-      andromeda: { total:45, done:28, members:[{n:'Marcus Webb',av:'MW',pts:9,status:'optimal'},{n:'Nina Park',av:'NP',pts:8,status:'optimal'},{n:'Dev Sharma',av:'DS',pts:8,status:'optimal'},{n:'Chloe Martin',av:'CM',pts:7,status:'optimal'},{n:'Aiden Kim',av:'AK',pts:6,status:'optimal'},{n:'Rosa Lima',av:'RL',pts:5,status:'available'},{n:'Sam Hughes',av:'SH',pts:2,status:'available'}] },
-      pegasus:   { total:52, done:22, members:[{n:'Priya Nair',av:'PN',pts:16,status:'overloaded'},{n:'Jordan Scott',av:'JS',pts:13,status:'overloaded'},{n:'Mia Chen',av:'MC',pts:10,status:'optimal'},{n:'Eli Watts',av:'EW',pts:8,status:'optimal'},{n:'Isha Patel',av:'IP',pts:5,status:'available'}] },
-      lyra:      { total:28, done:20, members:[{n:'James Okafor',av:'JO',pts:7,status:'optimal'},{n:'Zoe Fischer',av:'ZF',pts:6,status:'optimal'},{n:'Leo Wang',av:'LW',pts:5,status:'available'},{n:'Nora Bell',av:'NB',pts:4,status:'available'},{n:'Omar Ali',av:'OA',pts:4,status:'available'},{n:'Grace Kim',av:'GK',pts:2,status:'available'}] },
-      vega:      { total:35, done:18, members:[{n:'Ana Sousa',av:'AS',pts:11,status:'overloaded'},{n:'Carlos Lima',av:'CL',pts:10,status:'optimal'},{n:'Tara Singh',av:'TS',pts:9,status:'optimal'},{n:'Ben Fox',av:'BF',pts:5,status:'available'}] },
+      orion:     { total:78, done:41, members:[
+        {n:'Sarah Chen',   av:'SC',pts:18,done:9, status:'overloaded'},
+        {n:'Liam Torres',  av:'LT',pts:16,done:8, status:'overloaded'},
+        {n:'Ravi Krishnan',av:'RK',pts:15,done:8, status:'overloaded'},
+        {n:'Mei Nakamura', av:'MN',pts:12,done:7, status:'optimal'},
+        {n:'Tom Bradley',  av:'TB',pts:10,done:5, status:'optimal'},
+        {n:'Kat Diaz',     av:'KD',pts:7, done:4, status:'optimal'} ] },
+      andromeda: { total:45, done:28, members:[
+        {n:'Marcus Webb',  av:'MW',pts:9, done:6, status:'optimal'},
+        {n:'Nina Park',    av:'NP',pts:8, done:5, status:'optimal'},
+        {n:'Dev Sharma',   av:'DS',pts:8, done:5, status:'optimal'},
+        {n:'Chloe Martin', av:'CM',pts:7, done:5, status:'optimal'},
+        {n:'Aiden Kim',    av:'AK',pts:6, done:4, status:'optimal'},
+        {n:'Rosa Lima',    av:'RL',pts:5, done:2, status:'available'},
+        {n:'Sam Hughes',   av:'SH',pts:2, done:1, status:'available'} ] },
+      pegasus:   { total:52, done:22, members:[
+        {n:'Priya Nair',   av:'PN',pts:16,done:7, status:'overloaded'},
+        {n:'Jordan Scott', av:'JS',pts:13,done:5, status:'overloaded'},
+        {n:'Mia Chen',     av:'MC',pts:10,done:5, status:'optimal'},
+        {n:'Eli Watts',    av:'EW',pts:8, done:3, status:'optimal'},
+        {n:'Isha Patel',   av:'IP',pts:5, done:2, status:'available'} ] },
+      lyra:      { total:28, done:20, members:[
+        {n:'James Okafor', av:'JO',pts:7, done:5, status:'optimal'},
+        {n:'Zoe Fischer',  av:'ZF',pts:6, done:5, status:'optimal'},
+        {n:'Leo Wang',     av:'LW',pts:5, done:4, status:'available'},
+        {n:'Nora Bell',    av:'NB',pts:4, done:3, status:'available'},
+        {n:'Omar Ali',     av:'OA',pts:4, done:2, status:'available'},
+        {n:'Grace Kim',    av:'GK',pts:2, done:1, status:'available'} ] },
+      vega:      { total:35, done:18, members:[
+        {n:'Ana Sousa',    av:'AS',pts:11,done:6, status:'overloaded'},
+        {n:'Carlos Lima',  av:'CL',pts:10,done:5, status:'optimal'},
+        {n:'Tara Singh',   av:'TS',pts:9, done:5, status:'optimal'},
+        {n:'Ben Fox',      av:'BF',pts:5, done:2, status:'available'} ] },
     }
   },
   43: {
     id:43, name:'Sprint 43', state:'upcoming', start:'2026-02-25', end:'2026-03-11',
     teams:{
-      orion:     { total:65, done:0, members:[{n:'Sarah Chen',av:'SC',pts:15,status:'overloaded'},{n:'Liam Torres',av:'LT',pts:13,status:'overloaded'},{n:'Ravi Krishnan',av:'RK',pts:12,status:'overloaded'},{n:'Mei Nakamura',av:'MN',pts:11,status:'optimal'},{n:'Tom Bradley',av:'TB',pts:9,status:'optimal'},{n:'Kat Diaz',av:'KD',pts:5,status:'available'}] },
-      andromeda: { total:40, done:0, members:[{n:'Marcus Webb',av:'MW',pts:8,status:'optimal'},{n:'Nina Park',av:'NP',pts:7,status:'optimal'},{n:'Dev Sharma',av:'DS',pts:6,status:'optimal'},{n:'Chloe Martin',av:'CM',pts:6,status:'optimal'},{n:'Aiden Kim',av:'AK',pts:5,status:'available'},{n:'Rosa Lima',av:'RL',pts:5,status:'available'},{n:'Sam Hughes',av:'SH',pts:3,status:'available'}] },
-      pegasus:   { total:35, done:0, members:[{n:'Priya Nair',av:'PN',pts:10,status:'optimal'},{n:'Jordan Scott',av:'JS',pts:9,status:'optimal'},{n:'Mia Chen',av:'MC',pts:7,status:'optimal'},{n:'Eli Watts',av:'EW',pts:6,status:'optimal'},{n:'Isha Patel',av:'IP',pts:3,status:'available'}] },
-      lyra:      { total:22, done:0, members:[{n:'James Okafor',av:'JO',pts:5,status:'available'},{n:'Zoe Fischer',av:'ZF',pts:5,status:'available'},{n:'Leo Wang',av:'LW',pts:4,status:'available'},{n:'Nora Bell',av:'NB',pts:4,status:'available'},{n:'Omar Ali',av:'OA',pts:3,status:'available'},{n:'Grace Kim',av:'GK',pts:1,status:'available'}] },
-      vega:      { total:55, done:0, members:[{n:'Ana Sousa',av:'AS',pts:18,status:'overloaded'},{n:'Carlos Lima',av:'CL',pts:16,status:'overloaded'},{n:'Tara Singh',av:'TS',pts:14,status:'overloaded'},{n:'Ben Fox',av:'BF',pts:7,status:'optimal'}] },
+      orion:     { total:65, done:0, members:[
+        {n:'Sarah Chen',   av:'SC',pts:15,done:0,status:'overloaded'},
+        {n:'Liam Torres',  av:'LT',pts:13,done:0,status:'overloaded'},
+        {n:'Ravi Krishnan',av:'RK',pts:12,done:0,status:'overloaded'},
+        {n:'Mei Nakamura', av:'MN',pts:11,done:0,status:'optimal'},
+        {n:'Tom Bradley',  av:'TB',pts:9, done:0,status:'optimal'},
+        {n:'Kat Diaz',     av:'KD',pts:5, done:0,status:'available'} ] },
+      andromeda: { total:40, done:0, members:[
+        {n:'Marcus Webb',  av:'MW',pts:8, done:0,status:'optimal'},
+        {n:'Nina Park',    av:'NP',pts:7, done:0,status:'optimal'},
+        {n:'Dev Sharma',   av:'DS',pts:6, done:0,status:'optimal'},
+        {n:'Chloe Martin', av:'CM',pts:6, done:0,status:'optimal'},
+        {n:'Aiden Kim',    av:'AK',pts:5, done:0,status:'available'},
+        {n:'Rosa Lima',    av:'RL',pts:5, done:0,status:'available'},
+        {n:'Sam Hughes',   av:'SH',pts:3, done:0,status:'available'} ] },
+      pegasus:   { total:35, done:0, members:[
+        {n:'Priya Nair',   av:'PN',pts:10,done:0,status:'optimal'},
+        {n:'Jordan Scott', av:'JS',pts:9, done:0,status:'optimal'},
+        {n:'Mia Chen',     av:'MC',pts:7, done:0,status:'optimal'},
+        {n:'Eli Watts',    av:'EW',pts:6, done:0,status:'optimal'},
+        {n:'Isha Patel',   av:'IP',pts:3, done:0,status:'available'} ] },
+      lyra:      { total:22, done:0, members:[
+        {n:'James Okafor', av:'JO',pts:5, done:0,status:'available'},
+        {n:'Zoe Fischer',  av:'ZF',pts:5, done:0,status:'available'},
+        {n:'Leo Wang',     av:'LW',pts:4, done:0,status:'available'},
+        {n:'Nora Bell',    av:'NB',pts:4, done:0,status:'available'},
+        {n:'Omar Ali',     av:'OA',pts:3, done:0,status:'available'},
+        {n:'Grace Kim',    av:'GK',pts:1, done:0,status:'available'} ] },
+      vega:      { total:55, done:0, members:[
+        {n:'Ana Sousa',    av:'AS',pts:18,done:0,status:'overloaded'},
+        {n:'Carlos Lima',  av:'CL',pts:16,done:0,status:'overloaded'},
+        {n:'Tara Singh',   av:'TS',pts:14,done:0,status:'overloaded'},
+        {n:'Ben Fox',      av:'BF',pts:7, done:0,status:'optimal'} ] },
     }
   }
 };
 
-const getTeam  = id => TEAMS.find(t=>t.id===id);
-const getAlign = (tid,fid) => ALIGNMENT.find(a=>a.teamId===tid&&a.featureId===fid);
+const getTeam  = id => TEAMS.find(t => t.id===id);
+const getAlign = (tid,fid) => ALIGNMENT.find(a => a.teamId===tid && a.featureId===fid);
 
 // ─── SVG ICONS ────────────────────────────────────────────────────────────────
 const Svg = ({size=16,color='currentColor',children,style}) =>
@@ -159,6 +342,7 @@ const IcLayers  = ({s=16,c='currentColor'}) => html`<${Svg} size=${s} color=${c}
 const IcMerge   = ({s=16,c='currentColor'}) => html`<${Svg} size=${s} color=${c}><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/><//>`;
 const IcZap     = ({s=16,c='currentColor'}) => html`<${Svg} size=${s} color=${c}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/><//>`;
 const IcBar     = ({s=16,c='currentColor'}) => html`<${Svg} size=${s} color=${c}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><//>`;
+const IcGrid    = ({s=16,c='currentColor'}) => html`<${Svg} size=${s} color=${c}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><//>`;
 const IcLogout  = ({s=16,c='currentColor'}) => html`<${Svg} size=${s} color=${c}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/><//>`;
 const IcRefresh = ({s=16,c='currentColor',spin}) => html`<${Svg} size=${s} color=${c} style=${{display:'block',animation:spin?'spin 1s linear infinite':''}}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/><//>`;
 const IcChevL   = ({s=12,c='currentColor'}) => html`<${Svg} size=${s} color=${c}><polyline points="15 18 9 12 15 6"/><//>`;
@@ -169,20 +353,117 @@ const IcUsers   = ({s=14,c='currentColor'}) => html`<${Svg} size=${s} color=${c}
 const IcFlame   = ({s=14,c='currentColor'}) => html`<${Svg} size=${s} color=${c}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/><//>`;
 const IcTrend   = ({s=14,c='currentColor'}) => html`<${Svg} size=${s} color=${c}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/><//>`;
 
-// ─── STAT CARD ────────────────────────────────────────────────────────────────
+// ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
 const StatCard = ({icon,label,value,sub,accent}) => html`
   <div style=${{background:C.bgSurface,borderRadius:6,padding:'14px 16px',boxShadow:C.shadow,borderLeft:'3px solid '+(accent||C.border)}}>
-    <div style=${{display:'flex',alignItems:'center',gap:7,marginBottom:7}}>${icon}<span style=${{fontSize:11,fontWeight:600,color:C.textLow,textTransform:'uppercase',letterSpacing:'0.04em'}}>${label}</span></div>
-    <div style=${{fontSize:24,fontWeight:700,color:C.textHigh,marginBottom:2,lineHeight:1}}>${value}</div>
-    <div style=${{fontSize:11,color:C.textLow,marginTop:4}}>${sub}</div>
+    <div style=${{display:'flex',alignItems:'center',gap:7,marginBottom:7}}>${icon}<span style=${{fontSize:10,fontWeight:700,color:C.textLow,textTransform:'uppercase',letterSpacing:'0.05em'}}>${label}</span></div>
+    <div style=${{fontSize:24,fontWeight:700,color:C.textHigh,lineHeight:1,marginBottom:4}}>${value}</div>
+    <div style=${{fontSize:11,color:C.textLow}}>${sub}</div>
   </div>`;
 
-// ─── LOZENGE ──────────────────────────────────────────────────────────────────
 const Lozenge = ({text,bg,color}) => html`
   <span style=${{display:'inline-block',padding:'1px 6px',borderRadius:3,fontSize:10,fontWeight:700,
     textTransform:'uppercase',letterSpacing:'0.04em',background:bg,color:color,whiteSpace:'nowrap'}}>
     ${text}
   </span>`;
+
+// ─── TICKET FIELD ROW ─────────────────────────────────────────────────────────
+const TicketFieldRow = ({label, valEl, match}) => html`
+  <div style=${{display:'flex',alignItems:'flex-start',padding:'5px 14px',borderBottom:'1px solid '+C.borderLight,
+    background: match ? '#F0FDF4' : 'transparent', gap:10, minHeight:30}}>
+    <div style=${{width:88,flexShrink:0,fontSize:10,fontWeight:700,textTransform:'uppercase',
+      letterSpacing:'0.04em',color:match?'#15803D':C.textLow,display:'flex',alignItems:'center',gap:4,paddingTop:2}}>
+      ${match && html`<svg width="8" height="6" viewBox="0 0 12 9" fill="none"><polyline points="1 4 4.5 8 11 1" stroke="#15803D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
+      ${label}
+    </div>
+    <div style=${{flex:1,fontSize:11,color:C.textHigh,lineHeight:1.45}}>${valEl}</div>
+  </div>`;
+
+// ─── JIRA TICKET CARD ─────────────────────────────────────────────────────────
+function TicketCard({ issue, other }) {
+  const team  = getTeam(issue.teamId);
+  const sm    = (a,b) => a===b;
+  const am    = (a,b) => (a||[]).some(x=>(b||[]).includes(x));
+  const sc    = TICKET_STATUS[issue.status] || {bg:'#EBECF0',color:'#42526E'};
+  const tc    = TICKET_TYPE_COLOR[issue.type] || '#0052CC';
+  const pc    = TICKET_PRI_COLOR[issue.priority] || '#888';
+
+  return html`
+    <div style=${{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden',background:C.bgSurface,borderTop:'3px solid '+team.color}}>
+      <!-- Issue header bar -->
+      <div style=${{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',borderBottom:'1px solid '+C.border,flexShrink:0,background:C.bgSubtle}}>
+        <div style=${{display:'flex',alignItems:'center',gap:5}}>
+          <div style=${{width:10,height:10,borderRadius:issue.type==='Bug'?'50%':2,background:tc,flexShrink:0}}/>
+          <span style=${{fontSize:11,color:C.textMed,fontWeight:600}}>${issue.type}</span>
+        </div>
+        <span style=${{fontSize:12,fontFamily:'monospace',fontWeight:700,color:C.textHigh}}>${issue.key}</span>
+        <div style=${{marginLeft:'auto',display:'flex',gap:6,alignItems:'center'}}>
+          <span style=${{fontSize:10,padding:'2px 8px',borderRadius:3,fontWeight:700,background:sc.bg,color:sc.color,whiteSpace:'nowrap'}}>${issue.status}</span>
+        </div>
+      </div>
+
+      <!-- Team + Summary -->
+      <div style=${{padding:'10px 14px 8px',flexShrink:0,borderBottom:'1px solid '+C.border}}>
+        <div style=${{marginBottom:8}}>
+          <span style=${{fontSize:10,padding:'2px 8px',borderRadius:3,fontWeight:700,background:team.color+'18',color:team.color}}>${team.name}</span>
+        </div>
+        <p style=${{fontSize:15,fontWeight:700,color:C.textHigh,lineHeight:1.38,marginBottom:0}}>${issue.summary}</p>
+      </div>
+
+      <!-- Description -->
+      <div style=${{padding:'10px 14px',flexShrink:0,borderBottom:'1px solid '+C.border,background:'#FAFBFC'}}>
+        <div style=${{fontSize:10,fontWeight:700,color:C.textLow,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:5}}>Description</div>
+        <p style=${{fontSize:11,color:C.textMed,lineHeight:1.65,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:'4',WebkitBoxOrient:'vertical'}}>
+          ${issue.description}
+        </p>
+      </div>
+
+      <!-- Detail fields -->
+      <div style=${{flex:1,overflowY:'auto'}}>
+        <${TicketFieldRow} label="Status" match=${sm(issue.status,other.status)}
+          valEl=${html`<span style=${{fontSize:10,padding:'2px 7px',borderRadius:3,fontWeight:700,background:sc.bg,color:sc.color}}>${issue.status}</span>`}/>
+
+        <${TicketFieldRow} label="Priority" match=${sm(issue.priority,other.priority)}
+          valEl=${html`<span style=${{display:'flex',alignItems:'center',gap:5}}>
+            <span style=${{width:8,height:8,borderRadius:'50%',display:'inline-block',background:pc,flexShrink:0}}/>
+            <span style=${{fontSize:11,color:C.textHigh}}>${issue.priority}</span>
+          </span>`}/>
+
+        <${TicketFieldRow} label="Story Pts" match=${sm(issue.storyPoints,other.storyPoints)}
+          valEl=${html`<span style=${{display:'inline-flex',alignItems:'center',justifyContent:'center',width:22,height:22,borderRadius:'50%',background:C.brandLight,color:C.brand,fontSize:11,fontWeight:700}}>${issue.storyPoints}</span>`}/>
+
+        <${TicketFieldRow} label="Sprint" match=${sm(issue.sprint,other.sprint)}
+          valEl=${html`<span style=${{fontSize:11,color:C.textHigh}}>${issue.sprint}</span>`}/>
+
+        <${TicketFieldRow} label="Epic" match=${sm(issue.epic,other.epic)}
+          valEl=${html`<span style=${{fontSize:11,padding:'1px 7px',borderRadius:3,background:'#EAE6FF',color:'#5E4DB2',fontWeight:600}}>${issue.epic}</span>`}/>
+
+        <${TicketFieldRow} label="Assignee" match=${sm(issue.assignee,other.assignee)}
+          valEl=${html`<span style=${{display:'flex',alignItems:'center',gap:6}}>
+            <span style=${{width:20,height:20,borderRadius:'50%',background:team.color,display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:'white',flexShrink:0}}>${issue.assignee.charAt(0)}</span>
+            <span style=${{fontSize:11,color:C.textHigh}}>${issue.assignee}</span>
+          </span>`}/>
+
+        <${TicketFieldRow} label="Reporter" match=${sm(issue.reporter,other.reporter)}
+          valEl=${html`<span style=${{fontSize:11,color:C.textHigh}}>${issue.reporter}</span>`}/>
+
+        <${TicketFieldRow} label="Labels" match=${am(issue.labels,other.labels)}
+          valEl=${html`<div style=${{display:'flex',flexWrap:'wrap',gap:3}}>
+            ${(issue.labels||[]).map(l => html`
+              <span key=${l} style=${{fontSize:9,padding:'2px 6px',borderRadius:2,background:'#E8F4FD',border:'1px solid #B3D4F0',color:'#0052CC',fontWeight:600}}>${l}</span>`)}
+          </div>`}/>
+
+        <${TicketFieldRow} label="Components" match=${am(issue.components,other.components)}
+          valEl=${html`<div style=${{display:'flex',flexWrap:'wrap',gap:3}}>
+            ${(issue.components||[]).map(comp => html`
+              <span key=${comp} style=${{fontSize:9,padding:'2px 6px',borderRadius:2,background:'#EAE6FF',border:'1px solid #C0B6F2',color:'#5E4DB2',fontWeight:600}}>${comp}</span>`)}
+          </div>`}/>
+
+        <${TicketFieldRow} label="Created" match=${sm(issue.created,other.created)}
+          valEl=${html`<span style=${{fontSize:11,color:C.textMed}}>${issue.created}</span>`}/>
+      </div>
+    </div>`;
+}
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function LoginScreen({onLogin}) {
@@ -191,12 +472,13 @@ function LoginScreen({onLogin}) {
     {Icon:IcMerge, c:'#0052CC',l:'Duplicate Work Detector', d:'Surface tickets being built twice across teams'},
     {Icon:IcZap,   c:'#FF8B00',l:'Shared Dependency Graph', d:'Understand shared services and risk clusters'},
     {Icon:IcBar,   c:'#00875A',l:'Capacity Heatmap',        d:'Spot overloaded teams and available bandwidth'},
+    {Icon:IcGrid,  c:'#DE350B',l:'Team Load Map',           d:'Treemap view of developer allocation by load'},
   ];
   return html`
     <div style=${{display:'flex',height:'100%',overflow:'hidden'}}>
-      <div style=${{width:400,flexShrink:0,background:'#0747A6',padding:'48px 40px',display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
+      <div style=${{width:420,flexShrink:0,background:'#0747A6',padding:'44px 40px',display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
         <div>
-          <div style=${{display:'flex',alignItems:'center',gap:10,marginBottom:48}}>
+          <div style=${{display:'flex',alignItems:'center',gap:10,marginBottom:44}}>
             <div style=${{width:34,height:34,borderRadius:8,background:'rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center'}}>
               <${IcLayers} s=${16} c="white"/>
             </div>
@@ -204,32 +486,29 @@ function LoginScreen({onLogin}) {
           </div>
           <h1 style=${{fontSize:26,fontWeight:700,color:'white',lineHeight:1.35,marginBottom:12}}>
             The scrum of scrums<br/>
-            <span style=${{color:'rgba(255,255,255,0.65)'}}>your Jira doesn't have.</span>
+            <span style=${{color:'rgba(255,255,255,0.6)'}}>your Jira doesn't have.</span>
           </h1>
-          <p style=${{color:'rgba(255,255,255,0.55)',fontSize:13,lineHeight:1.7,marginBottom:40}}>
-            A real-time cross-team view — alignment,<br/>duplicate work, shared dependencies, and capacity.
+          <p style=${{color:'rgba(255,255,255,0.5)',fontSize:13,lineHeight:1.7,marginBottom:36}}>
+            A real-time cross-team view — alignment,<br/>duplicates, dependencies, and capacity.
           </p>
           ${feats.map(f => html`
-            <div style=${{display:'flex',alignItems:'flex-start',gap:12,marginBottom:18}}>
-              <div style=${{width:28,height:28,borderRadius:6,background:'rgba(255,255,255,0.12)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>
-                <${f.Icon} s=${13} c="white"/>
+            <div style=${{display:'flex',alignItems:'flex-start',gap:12,marginBottom:14}}>
+              <div style=${{width:26,height:26,borderRadius:6,background:'rgba(255,255,255,0.12)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>
+                <${f.Icon} s=${12} c="white"/>
               </div>
               <div>
-                <div style=${{fontSize:13,fontWeight:600,color:'white'}}>${f.l}</div>
-                <div style=${{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:1}}>${f.d}</div>
+                <div style=${{fontSize:12,fontWeight:600,color:'white'}}>${f.l}</div>
+                <div style=${{fontSize:11,color:'rgba(255,255,255,0.45)',marginTop:1}}>${f.d}</div>
               </div>
             </div>`)}
         </div>
-        <p style=${{fontSize:11,color:'rgba(255,255,255,0.3)'}}>Meridien Layer POC · 2026</p>
+        <p style=${{fontSize:11,color:'rgba(255,255,255,0.28)'}}>Meridien Layer POC · 2026</p>
       </div>
       <div style=${{flex:1,display:'flex',alignItems:'center',justifyContent:'center',padding:40,background:'#F4F5F7'}}>
         <div style=${{width:'100%',maxWidth:340,background:C.bgSurface,borderRadius:8,padding:32,boxShadow:C.shadowMd}}>
           <div style=${{display:'flex',alignItems:'center',gap:10,marginBottom:4}}>
             <div style=${{width:32,height:32,borderRadius:6,background:'#0052CC',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-              <svg viewBox="0 0 32 32" width="18" height="18" fill="white">
-                <path d="M7.4 16.8L13 10.8l3.2 3.5 4.4-5.1L22 10.8 16.2 17.5 13 14z"/>
-                <path d="M5 19.5l3.5 3.5 3.5-3.5-3.5-3.5zm14 0l3.5 3.5 3.5-3.5-3.5-3.5z" opacity=".6"/>
-              </svg>
+              <svg viewBox="0 0 32 32" width="18" height="18" fill="white"><path d="M7.4 16.8L13 10.8l3.2 3.5 4.4-5.1L22 10.8 16.2 17.5 13 14z"/><path d="M5 19.5l3.5 3.5 3.5-3.5-3.5-3.5zm14 0l3.5 3.5 3.5-3.5-3.5-3.5z" opacity=".6"/></svg>
             </div>
             <div>
               <div style=${{fontSize:14,fontWeight:700,color:C.textHigh}}>Connect to Jira</div>
@@ -237,22 +516,14 @@ function LoginScreen({onLogin}) {
             </div>
           </div>
           <div style=${{height:1,background:C.border,margin:'20px 0'}}/>
-          <p style=${{fontSize:12,color:C.textMed,marginBottom:20,lineHeight:1.55}}>
-            Sign in with your Atlassian account to load workspace data across all connected Jira sites.
-          </p>
-          <button onClick=${onLogin}
-            style=${{width:'100%',padding:'10px 16px',background:'#0052CC',border:'none',borderRadius:4,color:'white',fontWeight:600,fontSize:13,cursor:'pointer',marginBottom:10,transition:'background .1s'}}
-            onMouseEnter=${e=>{e.target.style.background='#0065FF'}}
-            onMouseLeave=${e=>{e.target.style.background='#0052CC'}}
-          >Connect to Jira</button>
-          <button onClick=${onLogin}
-            style=${{width:'100%',padding:'10px 16px',background:C.bgSurface,border:'2px solid '+C.border,borderRadius:4,color:C.textMed,fontWeight:600,fontSize:13,cursor:'pointer'}}
-            onMouseEnter=${e=>{e.target.style.background=C.bgSubtle}}
-            onMouseLeave=${e=>{e.target.style.background=C.bgSurface}}
-          >Load Demo Workspace</button>
-          <p style=${{marginTop:16,textAlign:'center',fontSize:11,color:C.textLow,lineHeight:1.6}}>
-            POC — simulated data only.<br/>No real credentials are sent.
-          </p>
+          <p style=${{fontSize:12,color:C.textMed,marginBottom:20,lineHeight:1.55}}>Sign in with your Atlassian account to load workspace data across all connected Jira sites.</p>
+          <button onClick=${onLogin} style=${{width:'100%',padding:'10px 16px',background:'#0052CC',border:'none',borderRadius:4,color:'white',fontWeight:700,fontSize:13,cursor:'pointer',marginBottom:10}}>
+            Connect to Jira
+          </button>
+          <button onClick=${onLogin} style=${{width:'100%',padding:'10px 16px',background:C.bgSurface,border:'2px solid '+C.border,borderRadius:4,color:C.textMed,fontWeight:600,fontSize:13,cursor:'pointer'}}>
+            Load Demo Workspace
+          </button>
+          <p style=${{marginTop:16,textAlign:'center',fontSize:11,color:C.textLow,lineHeight:1.6}}>POC — simulated data only.<br/>No real credentials are sent.</p>
         </div>
       </div>
     </div>`;
@@ -265,6 +536,7 @@ function Sidebar({active,setActive,onLogout,collapsed,setCollapsed}) {
     {id:'duplicates',   label:'Duplicate Work',    Icon:IcMerge },
     {id:'dependencies', label:'Dependency Graph',  Icon:IcZap   },
     {id:'capacity',     label:'Capacity Heatmap',  Icon:IcBar   },
+    {id:'loadmap',      label:'Team Load Map',     Icon:IcGrid  },
   ];
   const [hov,setHov] = useState(null);
   return html`
@@ -277,14 +549,13 @@ function Sidebar({active,setActive,onLogout,collapsed,setCollapsed}) {
       </div>
       <nav style=${{flex:1,padding:'8px 6px',display:'flex',flexDirection:'column',gap:1}}>
         ${nav.map(({id,label,Icon}) => {
-          const isActive = active===id, isHov = hov===id;
+          const isActive=active===id, isHov=hov===id;
           return html`
             <button key=${id} onClick=${()=>setActive(id)} title=${collapsed?label:undefined}
               onMouseEnter=${()=>setHov(id)} onMouseLeave=${()=>setHov(null)}
               style=${{display:'flex',alignItems:'center',gap:10,padding:collapsed?'8px 14px':'8px 12px',borderRadius:4,
                 background:isActive?'rgba(255,255,255,0.16)':(isHov?'rgba(255,255,255,0.08)':'transparent'),
-                border:'none',cursor:'pointer',color:'white',
-                opacity:isActive?1:(isHov?0.9:0.72),
+                border:'none',cursor:'pointer',color:'white',opacity:isActive?1:(isHov?0.9:0.72),
                 width:'100%',transition:'all .1s'}}>
               <${Icon} s=${15} c="currentColor"/>
               ${!collapsed && html`<span style=${{fontSize:12,fontWeight:isActive?600:400,whiteSpace:'nowrap'}}>${label}</span>`}
@@ -301,9 +572,7 @@ function Sidebar({active,setActive,onLogout,collapsed,setCollapsed}) {
             </div>
           </div>`}
         <button onClick=${onLogout}
-          style=${{display:'flex',alignItems:'center',gap:10,padding:collapsed?'7px 14px':'7px 10px',borderRadius:4,background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.55)',width:'100%',fontSize:12,transition:'color .1s'}}
-          onMouseEnter=${e=>{e.target.style.color='white'}}
-          onMouseLeave=${e=>{e.target.style.color='rgba(255,255,255,0.55)'}}>
+          style=${{display:'flex',alignItems:'center',gap:10,padding:collapsed?'7px 14px':'7px 10px',borderRadius:4,background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.55)',width:'100%',fontSize:12}}>
           <${IcLogout} s=${13} c="currentColor"/>
           ${!collapsed && 'Sign out'}
         </button>
@@ -321,33 +590,31 @@ function Sidebar({active,setActive,onLogout,collapsed,setCollapsed}) {
 function TopBar({activeView,selTeams,toggleTeam,sprintId,setSprintId}) {
   const [spin,setSpin] = useState(false);
   const refresh = () => { setSpin(true); setTimeout(()=>setSpin(false),1200); };
-  const TITLES = { alignment:'Feature Alignment Map', duplicates:'Duplicate Work Detector', dependencies:'Dependency Graph', capacity:'Capacity Heatmap' };
-  const SUBS   = { alignment:'Cross-team coverage of product features', duplicates:'Overlapping work items across teams', dependencies:'Shared services and components', capacity:'Team load and developer allocation' };
+  const TITLES = { alignment:'Feature Alignment Map', duplicates:'Duplicate Work Detector', dependencies:'Dependency Graph', capacity:'Capacity Heatmap', loadmap:'Team Load Map' };
+  const SUBS   = { alignment:'Cross-team coverage of product features', duplicates:'Overlapping work items across teams', dependencies:'Shared services and components', capacity:'Team load and developer allocation', loadmap:'Proportional treemap of team and developer workload' };
+  const SHOW_SPRINT = ['capacity','loadmap'];
   return html`
-    <header style=${{display:'flex',alignItems:'center',gap:12,padding:'0 20px',borderBottom:'1px solid '+C.border,height:56,flexShrink:0,background:C.bgSurface,boxShadow:'0 1px 0 '+C.border}}>
+    <header style=${{display:'flex',alignItems:'center',gap:12,padding:'0 20px',borderBottom:'1px solid '+C.border,height:56,flexShrink:0,background:C.bgSurface}}>
       <div style=${{flex:1}}>
         <div style=${{fontSize:14,fontWeight:700,color:C.textHigh}}>${TITLES[activeView]}</div>
         <div style=${{fontSize:11,color:C.textLow}}>${SUBS[activeView]}</div>
       </div>
-      ${activeView==='capacity' && html`
+      ${SHOW_SPRINT.includes(activeView) && html`
         <div style=${{display:'flex',alignItems:'center',background:C.bgSubtle,border:'1px solid '+C.border,borderRadius:4,overflow:'hidden'}}>
           ${[{id:42,l:'Sprint 42'},{id:43,l:'Sprint 43'}].map(s => html`
             <button key=${s.id} onClick=${()=>setSprintId(s.id)}
-              style=${{padding:'4px 14px',fontSize:11,fontWeight:600,border:'none',cursor:'pointer',
-                background:sprintId===s.id?'#0052CC':'transparent',
-                color:sprintId===s.id?'white':C.textMed}}>
+              style=${{padding:'4px 14px',fontSize:11,fontWeight:700,border:'none',cursor:'pointer',
+                background:sprintId===s.id?'#0052CC':'transparent',color:sprintId===s.id?'white':C.textMed}}>
               ${s.l}
             </button>`)}
         </div>`}
       <div style=${{display:'flex',alignItems:'center',gap:4}}>
         ${TEAMS.map(t => {
-          const on = selTeams.includes(t.id);
+          const on=selTeams.includes(t.id);
           return html`
             <button key=${t.id} onClick=${()=>toggleTeam(t.id)} title=${t.name}
-              style=${{padding:'3px 10px',borderRadius:3,fontSize:11,fontWeight:600,border:'2px solid',cursor:'pointer',transition:'all .1s',
-                borderColor:on?t.color:C.border,
-                background:on?t.color+'18':C.bgSurface,
-                color:on?t.color:C.textLow}}>
+              style=${{padding:'3px 10px',borderRadius:3,fontSize:11,fontWeight:700,border:'2px solid',cursor:'pointer',transition:'all .1s',
+                borderColor:on?t.color:C.border,background:on?t.color+'18':C.bgSurface,color:on?t.color:C.textLow}}>
               ${t.name.split(' ')[1]}
             </button>`;
         })}
@@ -366,7 +633,6 @@ function FeatureAlignmentMap({selTeams}) {
   const gaps   = teams.length*FEATURES.length - filled;
   const atRisk = ALIGNMENT.filter(a=>selTeams.includes(a.teamId)&&(a.status==='at-risk'||a.status==='behind')).length;
   const multi  = FEATURES.filter(f=>teams.filter(t=>getAlign(t.id,f.id)).length>1).length;
-
   return html`
     <div style=${{height:'100%',display:'flex',flexDirection:'column',gap:12,overflow:'hidden'}}>
       <div style=${{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,flexShrink:0}}>
@@ -379,16 +645,11 @@ function FeatureAlignmentMap({selTeams}) {
         <table>
           <thead>
             <tr>
-              <th style=${{position:'sticky',top:0,left:0,zIndex:20,background:'#F4F5F7',borderBottom:'2px solid '+C.border,borderRight:'1px solid '+C.border,padding:'10px 16px',textAlign:'left',minWidth:170,fontWeight:600,fontSize:11,color:C.textLow,textTransform:'uppercase',letterSpacing:'0.04em'}}>
-                Team ↓ · Feature →
-              </th>
+              <th style=${{position:'sticky',top:0,left:0,zIndex:20,background:'#F4F5F7',borderBottom:'2px solid '+C.border,borderRight:'1px solid '+C.border,padding:'10px 16px',textAlign:'left',minWidth:170,fontSize:10,fontWeight:700,color:C.textLow,textTransform:'uppercase',letterSpacing:'0.05em'}}>Team ↓ · Feature →</th>
               ${FEATURES.map(f => html`
                 <th key=${f.id} style=${{position:'sticky',top:0,zIndex:10,background:'#F4F5F7',borderBottom:'2px solid '+C.border,borderRight:'1px solid '+C.border,padding:'10px 12px',textAlign:'left',minWidth:148,fontWeight:'normal'}}>
-                  <div style=${{fontSize:11,fontWeight:600,color:C.textHigh,marginBottom:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:136}}>${f.name}</div>
-                  <div style=${{display:'flex',alignItems:'center',gap:5}}>
-                    <${Lozenge} text=${f.priority} bg=${PRI_BG[f.priority]} color=${PRI_TEXT[f.priority]}/>
-                    <span style=${{fontSize:10,color:C.textLow}}>${f.quarter}</span>
-                  </div>
+                  <div style=${{fontSize:11,fontWeight:700,color:C.textHigh,marginBottom:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:136}}>${f.name}</div>
+                  <div style=${{display:'flex',alignItems:'center',gap:5}}><${Lozenge} text=${f.priority} bg=${PRI_BG[f.priority]} color=${PRI_TEXT[f.priority]}/><span style=${{fontSize:10,color:C.textLow}}>${f.quarter}</span></div>
                 </th>`)}
             </tr>
           </thead>
@@ -399,20 +660,17 @@ function FeatureAlignmentMap({selTeams}) {
                   <div style=${{display:'flex',alignItems:'center',gap:8}}>
                     <div style=${{width:8,height:8,borderRadius:'50%',background:team.color,flexShrink:0}}/>
                     <div>
-                      <div style=${{fontSize:12,fontWeight:600,color:C.textHigh,whiteSpace:'nowrap'}}>${team.name}</div>
+                      <div style=${{fontSize:12,fontWeight:700,color:C.textHigh,whiteSpace:'nowrap'}}>${team.name}</div>
                       <div style=${{fontSize:10,color:C.textLow}}>${team.focus}</div>
                     </div>
                   </div>
                 </td>
                 ${FEATURES.map(f => {
-                  const e = getAlign(team.id,f.id);
-                  if (!e) return html`
-                    <td key=${f.id} style=${{borderRight:'1px solid '+C.borderLight,borderBottom:'1px solid '+C.borderLight,padding:'8px 12px',textAlign:'center',background:'#F4F5F7'}}>
-                      <span style=${{fontSize:10,color:'#C1C7D0'}}>—</span>
-                    </td>`;
+                  const e=getAlign(team.id,f.id);
+                  if (!e) return html`<td key=${f.id} style=${{borderRight:'1px solid '+C.borderLight,borderBottom:'1px solid '+C.borderLight,padding:'8px 12px',textAlign:'center',background:'#F4F5F7'}}><span style=${{fontSize:10,color:'#C1C7D0'}}>—</span></td>`;
                   return html`
                     <td key=${f.id} style=${{borderRight:'1px solid '+C.borderLight,borderBottom:'1px solid '+C.borderLight,padding:'6px 8px'}}>
-                      <div style=${{borderRadius:3,padding:'5px 7px',background:STATUS_BG[e.status]+'55',border:'1px solid '+STATUS_BG[e.status]}}>
+                      <div style=${{borderRadius:3,padding:'5px 7px',background:STATUS_BG[e.status]+'66',border:'1px solid '+STATUS_BG[e.status]}}>
                         <div style=${{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:3}}>
                           <${Lozenge} text=${e.status.replace('-',' ')} bg=${STATUS_BG[e.status]} color=${STATUS_TEXT[e.status]}/>
                           <span style=${{fontSize:9,color:C.textLow,fontFamily:'monospace'}}>${e.storyPoints}pt</span>
@@ -425,14 +683,9 @@ function FeatureAlignmentMap({selTeams}) {
           </tbody>
         </table>
       </div>
-      <div style=${{display:'flex',alignItems:'center',gap:12,flexShrink:0,paddingLeft:2}}>
+      <div style=${{display:'flex',alignItems:'center',gap:12,flexShrink:0}}>
         <span style=${{fontSize:11,color:C.textLow}}>Legend:</span>
-        ${[
-          {l:'On track', bg:STATUS_BG['on-track'], c:STATUS_TEXT['on-track']},
-          {l:'At risk',  bg:STATUS_BG['at-risk'],  c:STATUS_TEXT['at-risk']},
-          {l:'Behind',   bg:STATUS_BG['behind'],   c:STATUS_TEXT['behind']},
-          {l:'Gap',      bg:'#EBECF0',              c:'#97A0AF'},
-        ].map(x => html`<${Lozenge} key=${x.l} text=${x.l} bg=${x.bg} color=${x.c}/>`)}
+        ${[{l:'On track',bg:STATUS_BG['on-track'],c:STATUS_TEXT['on-track']},{l:'At risk',bg:STATUS_BG['at-risk'],c:STATUS_TEXT['at-risk']},{l:'Behind',bg:STATUS_BG['behind'],c:STATUS_TEXT['behind']},{l:'Gap',bg:'#EBECF0',c:'#97A0AF'}].map(x=>html`<${Lozenge} key=${x.l} text=${x.l} bg=${x.bg} color=${x.c}/>`)}
       </div>
     </div>`;
 }
@@ -448,8 +701,6 @@ function DuplicateWorkDetector({selTeams}) {
   const scoreBg    = s => s>=0.85?'#FFEBE6':s>=0.75?'#FFF0E6':'#FFFAE6';
   const RBG = {title:'#FFEBE6',labels:'#EAE6FF',components:'#DEEBFF',epic:'#FFFAE6'};
   const RTC = {title:'#DE350B',labels:'#403294',components:'#0747A6',epic:'#FF8B00'};
-
-  const Badge   = ({r}) => html`<${Lozenge} text=${r} bg=${RBG[r]} color=${RTC[r]}/>`;
   const TeamDot = ({id,size=14}) => { const t=getTeam(id); return html`<div style=${{width:size,height:size,borderRadius:'50%',background:t.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:7,fontWeight:700,color:'white'}} title=${t.name}>${t.name.charAt(5)}</div>`; };
 
   return html`
@@ -461,74 +712,66 @@ function DuplicateWorkDetector({selTeams}) {
         <${StatCard} icon=${html`<${IcCheck} s=${14} c="#00875A"/>`} label="Dismissed"         value=${dismissed.size} sub="reviewed & cleared" accent="#00875A"/>
       </div>
       <div style=${{flex:1,display:'flex',gap:12,minHeight:0}}>
-        <div style=${{width:290,flexShrink:0,background:C.bgSurface,borderRadius:4,overflowY:'auto',boxShadow:C.shadow}}>
-          <div style=${{padding:'10px 16px',borderBottom:'1px solid '+C.border,background:'#F4F5F7'}}>
+        <!-- Left: list panel -->
+        <div style=${{width:280,flexShrink:0,background:C.bgSurface,borderRadius:4,display:'flex',flexDirection:'column',overflow:'hidden',boxShadow:C.shadow}}>
+          <div style=${{padding:'10px 14px',borderBottom:'1px solid '+C.border,background:'#F4F5F7',flexShrink:0}}>
             <span style=${{fontSize:12,fontWeight:700,color:C.textHigh}}>Detected overlaps</span>
+            <span style=${{fontSize:11,color:C.textLow,marginLeft:6}}>(${visible.length})</span>
           </div>
-          ${visible.length===0
-            ? html`<div style=${{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:140,color:C.textLow,gap:8}}>
-                <${IcCheck} s=${24} c="#00875A"/>
-                <p style=${{fontSize:13}}>All reviewed</p>
-              </div>`
-            : visible.map(d => {
-              const [ta,tb]=[getTeam(d.issueA.teamId),getTeam(d.issueB.teamId)];
-              return html`
-                <div key=${d.id} onClick=${()=>setSel(d)}
-                  style=${{padding:'10px 14px',borderBottom:'1px solid '+C.borderLight,cursor:'pointer',background:sel?.id===d.id?C.brandLight:'transparent',transition:'background .1s'}}>
-                  <div style=${{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:5}}>
-                    <div style=${{display:'flex',alignItems:'center',gap:5}}>
-                      <${TeamDot} id=${ta.id}/><span style=${{fontSize:9,color:C.textLow}}>↔</span><${TeamDot} id=${tb.id}/>
+          <div style=${{flex:1,overflowY:'auto'}}>
+            ${visible.length===0
+              ? html`<div style=${{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:120,color:C.textLow,gap:8}}>
+                  <${IcCheck} s=${24} c="#00875A"/><p style=${{fontSize:13}}>All reviewed</p>
+                </div>`
+              : visible.map(d => {
+                const [ta,tb]=[getTeam(d.issueA.teamId),getTeam(d.issueB.teamId)];
+                return html`
+                  <div key=${d.id} onClick=${()=>setSel(d)}
+                    style=${{padding:'10px 14px',borderBottom:'1px solid '+C.borderLight,cursor:'pointer',
+                      background:sel?.id===d.id?C.brandLight:'transparent',transition:'background .1s'}}>
+                    <div style=${{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:5}}>
+                      <div style=${{display:'flex',alignItems:'center',gap:5}}>
+                        <${TeamDot} id=${ta.id}/><span style=${{fontSize:9,color:C.textLow}}>↔</span><${TeamDot} id=${tb.id}/>
+                      </div>
+                      <span style=${{fontSize:12,fontWeight:700,padding:'1px 7px',borderRadius:3,background:scoreBg(d.score),color:scoreColor(d.score)}}>${Math.round(d.score*100)}%</span>
                     </div>
-                    <span style=${{fontSize:12,fontWeight:700,padding:'1px 7px',borderRadius:3,background:scoreBg(d.score),color:scoreColor(d.score)}}>${Math.round(d.score*100)}%</span>
-                  </div>
-                  <div style=${{fontSize:11,color:C.textHigh,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:1}}>${d.issueA.summary}</div>
-                  <div style=${{fontSize:11,color:C.textMed,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:5}}>${d.issueB.summary}</div>
-                  <div style=${{display:'flex',gap:4}}>${d.reasons.map(r=>html`<${Badge} key=${r} r=${r}/>`)}</div>
-                </div>`;
-            })}
+                    <div style=${{fontSize:11,color:C.textHigh,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:1}}>${d.issueA.summary}</div>
+                    <div style=${{fontSize:11,color:C.textMed,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:5}}>${d.issueB.summary}</div>
+                    <div style=${{display:'flex',gap:4,flexWrap:'wrap'}}>${d.reasons.map(r=>html`<${Lozenge} key=${r} text=${r} bg=${RBG[r]} color=${RTC[r]}/>`)}</div>
+                  </div>`;
+              })}
+          </div>
         </div>
+
+        <!-- Right: ticket comparison -->
         ${sel ? html`
-          <div style=${{flex:1,background:C.bgSurface,borderRadius:4,display:'flex',flexDirection:'column',overflow:'hidden',boxShadow:C.shadow}}>
-            <div style=${{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 20px',borderBottom:'1px solid '+C.border,background:scoreBg(sel.score)}}>
-              <div style=${{display:'flex',alignItems:'center',gap:10}}>
-                <${IcMerge} s=${16} c=${scoreColor(sel.score)}/>
-                <div>
-                  <span style=${{fontSize:13,fontWeight:700,color:scoreColor(sel.score)}}>Potential duplicate — ${Math.round(sel.score*100)}% similarity</span>
-                  <div style=${{display:'flex',gap:4,marginTop:4}}>${sel.reasons.map(r=>html`<${Badge} key=${r} r=${r}/>`)}</div>
-                </div>
+          <div style=${{flex:1,display:'flex',flexDirection:'column',minWidth:0,overflow:'hidden',borderRadius:4,boxShadow:C.shadow}}>
+            <!-- Comparison header -->
+            <div style=${{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',background:scoreBg(sel.score),borderBottom:'2px solid '+scoreColor(sel.score),flexShrink:0}}>
+              <${IcMerge} s=${16} c=${scoreColor(sel.score)}/>
+              <span style=${{fontSize:13,fontWeight:700,color:scoreColor(sel.score)}}>${Math.round(sel.score*100)}% similarity</span>
+              <div style=${{display:'flex',gap:4,flex:1}}>${sel.reasons.map(r=>html`<${Lozenge} key=${r} text=${r} bg=${RBG[r]} color=${RTC[r]}/>`)}</div>
+              <div style=${{display:'flex',alignItems:'center',gap:6,fontSize:10,color:C.textLow,flexShrink:0}}>
+                <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#E3FCEF"/></svg> matching fields
+                <svg width="8" height="8" viewBox="0 0 8 8"><rect width="8" height="8" rx="1" fill="#F4F5F7"/></svg> different
               </div>
               <button onClick=${()=>dismiss(sel.id)}
-                style=${{display:'flex',alignItems:'center',gap:6,padding:'6px 14px',background:'#00875A',border:'none',borderRadius:4,color:'white',fontSize:11,fontWeight:700,cursor:'pointer'}}>
+                style=${{display:'flex',alignItems:'center',gap:6,padding:'6px 14px',background:'#00875A',border:'none',borderRadius:4,color:'white',fontSize:11,fontWeight:700,cursor:'pointer',flexShrink:0}}>
                 <${IcCheck} s=${11} c="white"/> Mark reviewed
               </button>
             </div>
-            <div style=${{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr',overflow:'auto'}}>
-              ${[sel.issueA,sel.issueB].map((issue,i) => {
-                const team=getTeam(issue.teamId);
-                return html`
-                  <div key=${i} style=${{padding:20,borderRight:i===0?'1px solid '+C.border:'none'}}>
-                    <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:16}}>
-                      <span style=${{padding:'2px 8px',borderRadius:3,fontSize:11,fontWeight:700,background:team.color+'18',color:team.color}}>${team.name}</span>
-                      <span style=${{fontSize:11,fontFamily:'monospace',color:C.textLow}}>${issue.key}</span>
-                      <span style=${{marginLeft:'auto',fontSize:10,color:C.textLow,background:C.bgSubtle,border:'1px solid '+C.border,padding:'1px 6px',borderRadius:3}}>${issue.type}</span>
-                    </div>
-                    <div style=${{marginBottom:16}}>
-                      <div style=${{fontSize:11,color:C.textLow,marginBottom:5,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.04em'}}>Summary</div>
-                      <p style=${{fontSize:13,color:C.textHigh,lineHeight:1.55}}>${issue.summary}</p>
-                    </div>
-                    <div>
-                      <div style=${{fontSize:11,color:C.textLow,marginBottom:8,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.04em'}}>Assignee</div>
-                      <div style=${{display:'flex',alignItems:'center',gap:8}}>
-                        <div style=${{width:24,height:24,borderRadius:'50%',background:team.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:'white'}}>${issue.assignee.charAt(0)}</div>
-                        <span style=${{fontSize:13,color:C.textHigh}}>${issue.assignee}</span>
-                      </div>
-                    </div>
-                  </div>`;
-              })}
+            <!-- Two ticket cards side by side -->
+            <div style=${{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr',overflow:'hidden',borderRadius:'0 0 4px 4px'}}>
+              <div style=${{overflow:'hidden',borderRight:'3px solid '+C.border}}>
+                <${TicketCard} issue=${sel.issueA} other=${sel.issueB}/>
+              </div>
+              <div style=${{overflow:'hidden'}}>
+                <${TicketCard} issue=${sel.issueB} other=${sel.issueA}/>
+              </div>
             </div>
           </div>`
-        : html`<div style=${{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:C.textLow,background:C.bgSurface,borderRadius:4,boxShadow:C.shadow}}>
-            <div style=${{textAlign:'center'}}><${IcCheck} s=${32} c="#00875A"/><p style=${{fontSize:13,marginTop:10}}>All overlaps reviewed</p></div>
+        : html`<div style=${{flex:1,display:'flex',alignItems:'center',justifyContent:'center',background:C.bgSurface,borderRadius:4,boxShadow:C.shadow}}>
+            <div style=${{textAlign:'center',color:C.textLow}}><${IcCheck} s=${32} c="#00875A"/><p style=${{fontSize:13,marginTop:10}}>All overlaps reviewed</p></div>
           </div>`}
       </div>
     </div>`;
@@ -538,23 +781,20 @@ function DuplicateWorkDetector({selTeams}) {
 function SharedDependencyGraph({selTeams}) {
   const [selDep,setSelDep] = useState(null);
   const [hovDep,setHovDep] = useState(null);
-
   const visDeps  = DEPENDENCIES.filter(d=>d.teams.filter(t=>selTeams.includes(t)).length>=2);
   const visTeams = TEAMS.filter(t=>selTeams.includes(t.id));
-
-  const W=660, H=420, cx=190, cy=H/2, R=150;
+  const W=660,H=420,cx=190,cy=H/2,R=150;
   const teamPos = {};
-  visTeams.forEach((t,i)=>{ const a=(i/visTeams.length)*Math.PI*2-Math.PI/2; teamPos[t.id]={x:cx+R*Math.cos(a),y:cy+R*Math.sin(a)}; });
-  const depStep = Math.min(58,(H-60)/Math.max(visDeps.length,1));
-  const depPos  = {};
-  visDeps.forEach((d,i)=>{ depPos[d.id]={x:530,y:46+i*depStep}; });
-
+  visTeams.forEach((t,i)=>{const a=(i/visTeams.length)*Math.PI*2-Math.PI/2; teamPos[t.id]={x:cx+R*Math.cos(a),y:cy+R*Math.sin(a)};});
+  const depStep=Math.min(58,(H-60)/Math.max(visDeps.length,1));
+  const depPos={};
+  visDeps.forEach((d,i)=>{depPos[d.id]={x:530,y:46+i*depStep};});
   return html`
     <div style=${{height:'100%',display:'flex',flexDirection:'column',gap:12,overflow:'hidden'}}>
       <div style=${{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,flexShrink:0}}>
-        <${StatCard} icon=${html`<${IcAlert} s=${14} c="#DE350B"/>`} label="High risk deps"    value=${visDeps.filter(d=>d.riskLevel==='high').length}   sub="shared by 3+ teams"     accent="#DE350B"/>
-        <${StatCard} icon=${html`<${IcAlert} s=${14} c="#FF8B00"/>`} label="Medium risk deps"  value=${visDeps.filter(d=>d.riskLevel==='medium').length} sub="shared by 2 teams"      accent="#FF8B00"/>
-        <${StatCard} icon=${html`<${IcCheck} s=${14} c="#00875A"/>`} label="Low risk deps"     value=${visDeps.filter(d=>d.riskLevel==='low').length}    sub="minimal coordination"   accent="#00875A"/>
+        <${StatCard} icon=${html`<${IcAlert} s=${14} c="#DE350B"/>`} label="High risk deps"    value=${visDeps.filter(d=>d.riskLevel==='high').length}   sub="shared by 3+ teams"   accent="#DE350B"/>
+        <${StatCard} icon=${html`<${IcAlert} s=${14} c="#FF8B00"/>`} label="Medium risk deps"  value=${visDeps.filter(d=>d.riskLevel==='medium').length} sub="shared by 2 teams"    accent="#FF8B00"/>
+        <${StatCard} icon=${html`<${IcCheck} s=${14} c="#00875A"/>`} label="Low risk deps"     value=${visDeps.filter(d=>d.riskLevel==='low').length}    sub="minimal coordination" accent="#00875A"/>
         <${StatCard} icon=${html`<${IcZap}   s=${14} c="#0052CC"/>`} label="Total connections" value=${visDeps.reduce((a,d)=>a+d.teams.filter(t=>selTeams.includes(t)).length,0)} sub="team-dependency edges" accent="#0052CC"/>
       </div>
       <div style=${{flex:1,display:'flex',gap:12,minHeight:0}}>
@@ -562,54 +802,31 @@ function SharedDependencyGraph({selTeams}) {
           <svg viewBox=${'0 0 '+W+' '+H} style=${{width:'100%',height:'100%'}}>
             <rect width=${W} height=${H} fill="white"/>
             ${visDeps.map(dep=>dep.teams.filter(t=>selTeams.includes(t)).map(tid=>{
-              const tp=teamPos[tid], dp=depPos[dep.id]; if(!tp||!dp) return null;
+              const tp=teamPos[tid],dp=depPos[dep.id]; if(!tp||!dp) return null;
               const hi=hovDep===dep.id||selDep?.id===dep.id;
               const mx=(tp.x+dp.x)/2;
-              return html`<path key=${dep.id+'-'+tid}
-                d=${'M'+tp.x+' '+tp.y+' C'+mx+' '+tp.y+' '+mx+' '+dp.y+' '+dp.x+' '+dp.y}
-                stroke=${hi?RISK_DOT[dep.riskLevel]:'#DFE1E6'}
-                stroke-width=${hi?2:1.5} fill="none" stroke-dasharray=${hi?'':'4 3'}/>`;
+              return html`<path key=${dep.id+'-'+tid} d=${'M'+tp.x+' '+tp.y+' C'+mx+' '+tp.y+' '+mx+' '+dp.y+' '+dp.x+' '+dp.y}
+                stroke=${hi?RISK_DOT[dep.riskLevel]:'#DFE1E6'} stroke-width=${hi?2:1.5} fill="none" stroke-dasharray=${hi?'':'4 3'}/>`;
             }))}
-            ${visTeams.map(team=>{
-              const p=teamPos[team.id]; if(!p) return null;
-              return html`
-                <g key=${team.id} transform=${'translate('+p.x+','+p.y+')'}>
-                  <circle r="28" fill=${team.color+'18'}/>
-                  <circle r="28" fill="none" stroke=${team.color} stroke-width="2"/>
-                  <text text-anchor="middle" y="4" fill=${team.color} font-size="10" font-weight="700" font-family="-apple-system,sans-serif">
-                    ${team.name.split(' ')[1].slice(0,3).toUpperCase()}
-                  </text>
-                  <text text-anchor="middle" y="44" fill="#7A869A" font-size="9" font-family="-apple-system,sans-serif">
-                    ${team.name}
-                  </text>
-                </g>`;
+            ${visTeams.map(team=>{const p=teamPos[team.id]; if(!p) return null; return html`
+              <g key=${team.id} transform=${'translate('+p.x+','+p.y+')'}>
+                <circle r="28" fill=${team.color+'18'}/><circle r="28" fill="none" stroke=${team.color} stroke-width="2"/>
+                <text text-anchor="middle" y="4" fill=${team.color} font-size="10" font-weight="700" font-family="-apple-system,sans-serif">${team.name.split(' ')[1].slice(0,3).toUpperCase()}</text>
+                <text text-anchor="middle" y="44" fill="#7A869A" font-size="9" font-family="-apple-system,sans-serif">${team.name}</text>
+              </g>`;
             })}
-            ${visDeps.map(dep=>{
-              const p=depPos[dep.id]; if(!p) return null;
-              const hi=hovDep===dep.id||selDep?.id===dep.id;
-              const dot=RISK_DOT[dep.riskLevel];
-              return html`
-                <g key=${dep.id} transform=${'translate('+p.x+','+p.y+')'}
-                  style=${{cursor:'pointer'}}
-                  onMouseEnter=${()=>setHovDep(dep.id)}
-                  onMouseLeave=${()=>setHovDep(null)}
-                  onClick=${()=>setSelDep(selDep?.id===dep.id?null:dep)}>
-                  <rect x="-74" y="-14" width="148" height="28" rx="4"
-                    fill=${hi?RISK_BG[dep.riskLevel]:'#F4F5F7'}
-                    stroke=${hi?dot:C.border} stroke-width="1.5"/>
-                  <circle cx="-60" cy="0" r="4" fill=${dot}/>
-                  <text x="-50" y="4" fill=${hi?RISK_TXT[dep.riskLevel]:'#172B4D'} font-size="10" font-family="-apple-system,sans-serif" font-weight="500">
-                    ${dep.name.length>21?dep.name.slice(0,20)+'…':dep.name}
-                  </text>
-                </g>`;
+            ${visDeps.map(dep=>{const p=depPos[dep.id]; if(!p) return null; const hi=hovDep===dep.id||selDep?.id===dep.id; const dot=RISK_DOT[dep.riskLevel]; return html`
+              <g key=${dep.id} transform=${'translate('+p.x+','+p.y+')'} style=${{cursor:'pointer'}}
+                onMouseEnter=${()=>setHovDep(dep.id)} onMouseLeave=${()=>setHovDep(null)}
+                onClick=${()=>setSelDep(selDep?.id===dep.id?null:dep)}>
+                <rect x="-74" y="-14" width="148" height="28" rx="4" fill=${hi?RISK_BG[dep.riskLevel]:'#F4F5F7'} stroke=${hi?dot:C.border} stroke-width="1.5"/>
+                <circle cx="-60" cy="0" r="4" fill=${dot}/>
+                <text x="-50" y="4" fill=${hi?RISK_TXT[dep.riskLevel]:'#172B4D'} font-size="10" font-family="-apple-system,sans-serif" font-weight="500">${dep.name.length>21?dep.name.slice(0,20)+'…':dep.name}</text>
+              </g>`;
             })}
           </svg>
           <div style=${{position:'absolute',bottom:12,left:12,display:'flex',alignItems:'center',gap:12,background:'rgba(255,255,255,0.9)',padding:'5px 10px',borderRadius:4,border:'1px solid '+C.border}}>
-            ${Object.entries(RISK_DOT).map(([k,v])=>html`
-              <div key=${k} style=${{display:'flex',alignItems:'center',gap:5}}>
-                <div style=${{width:7,height:7,borderRadius:'50%',background:v}}/>
-                <span style=${{fontSize:10,color:C.textMed,textTransform:'capitalize'}}>${k} risk</span>
-              </div>`)}
+            ${Object.entries(RISK_DOT).map(([k,v])=>html`<div key=${k} style=${{display:'flex',alignItems:'center',gap:5}}><div style=${{width:7,height:7,borderRadius:'50%',background:v}}/><span style=${{fontSize:10,color:C.textMed,textTransform:'capitalize'}}>${k} risk</span></div>`)}
           </div>
         </div>
         <div style=${{width:248,flexShrink:0,background:C.bgSurface,borderRadius:4,overflowY:'auto',boxShadow:C.shadow}}>
@@ -620,24 +837,17 @@ function SharedDependencyGraph({selTeams}) {
             <div style=${{padding:14}}>
               <${Lozenge} text=${selDep.type} bg=${RISK_BG[selDep.riskLevel]} color=${RISK_TXT[selDep.riskLevel]}/>
               <div style=${{fontSize:14,fontWeight:700,color:C.textHigh,marginTop:8,marginBottom:3}}>${selDep.name}</div>
-              <div style=${{fontSize:12,color:RISK_TXT[selDep.riskLevel],marginBottom:16,fontWeight:600}}>${selDep.riskLevel} risk · ${selDep.issueCount} issues</div>
-              <div style=${{fontSize:11,color:C.textLow,marginBottom:8,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.04em'}}>Shared by teams</div>
-              ${selDep.teams.filter(t=>selTeams.includes(t)).map(tid=>{
-                const t=getTeam(tid);
-                return html`
-                  <div key=${tid} style=${{display:'flex',alignItems:'center',gap:8,marginBottom:10,padding:'7px 10px',background:C.bgSubtle,borderRadius:4,border:'1px solid '+C.borderLight}}>
-                    <div style=${{width:20,height:20,borderRadius:4,background:t.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:'white',flexShrink:0}}>${t.name.charAt(5)}</div>
-                    <div>
-                      <div style=${{fontSize:12,fontWeight:600,color:C.textHigh}}>${t.name}</div>
-                      <div style=${{fontSize:10,color:C.textLow}}>${t.focus}</div>
-                    </div>
-                  </div>`;
-              })}
+              <div style=${{fontSize:12,color:RISK_TXT[selDep.riskLevel],marginBottom:16,fontWeight:700}}>${selDep.riskLevel} risk · ${selDep.issueCount} issues</div>
+              <div style=${{fontSize:10,color:C.textLow,marginBottom:8,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.04em'}}>Shared by teams</div>
+              ${selDep.teams.filter(t=>selTeams.includes(t)).map(tid=>{const t=getTeam(tid); return html`
+                <div key=${tid} style=${{display:'flex',alignItems:'center',gap:8,marginBottom:8,padding:'7px 10px',background:C.bgSubtle,borderRadius:4,border:'1px solid '+C.borderLight}}>
+                  <div style=${{width:20,height:20,borderRadius:4,background:t.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:'white',flexShrink:0}}>${t.name.charAt(5)}</div>
+                  <div><div style=${{fontSize:12,fontWeight:600,color:C.textHigh}}>${t.name}</div><div style=${{fontSize:10,color:C.textLow}}>${t.focus}</div></div>
+                </div>`;})}
               <button onClick=${()=>setSelDep(null)} style=${{marginTop:8,fontSize:11,color:C.textMed,background:C.bgSubtle,border:'1px solid '+C.border,borderRadius:4,padding:'6px 12px',cursor:'pointer',width:'100%',fontWeight:600}}>← Back to list</button>
             </div>`
           : visDeps.map(dep=>html`
-            <div key=${dep.id} onClick=${()=>setSelDep(dep)}
-              onMouseEnter=${()=>setHovDep(dep.id)} onMouseLeave=${()=>setHovDep(null)}
+            <div key=${dep.id} onClick=${()=>setSelDep(dep)} onMouseEnter=${()=>setHovDep(dep.id)} onMouseLeave=${()=>setHovDep(null)}
               style=${{padding:'9px 14px',borderBottom:'1px solid '+C.borderLight,cursor:'pointer',background:hovDep===dep.id?C.bgSubtle:'transparent',transition:'background .1s'}}>
               <div style=${{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:3}}>
                 <span style=${{fontSize:12,fontWeight:600,color:C.textHigh}}>${dep.name}</span>
@@ -646,11 +856,7 @@ function SharedDependencyGraph({selTeams}) {
               <div style=${{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                 <span style=${{fontSize:10,color:C.textLow}}>${dep.teams.filter(t=>selTeams.includes(t)).length} teams · ${dep.issueCount} issues</span>
                 <div style=${{display:'flex'}}>
-                  ${dep.teams.filter(t=>selTeams.includes(t)).map((tid,i)=>{
-                    const t=getTeam(tid);
-                    return html`<div key=${tid} style=${{width:13,height:13,borderRadius:'50%',background:t.color,border:'2px solid white',marginLeft:i>0?-4:0}}/>`;
-                  })}
-                </div>
+                  ${dep.teams.filter(t=>selTeams.includes(t)).map((tid,i)=>{const t=getTeam(tid); return html`<div key=${tid} style=${{width:13,height:13,borderRadius:'50%',background:t.color,border:'2px solid white',marginLeft:i>0?-4:0}}/>`;})}</div>
               </div>
             </div>`)}
         </div>
@@ -663,23 +869,22 @@ function CapacityHeatmap({selTeams,sprintId}) {
   const [drillId,setDrillId] = useState(null);
   const sprint   = SPRINTS[sprintId];
   const teams    = TEAMS.filter(t=>selTeams.includes(t.id));
-  const teamData = teams.map(team=>{ const td=sprint.teams[team.id]; const ppd=parseFloat((td.total/team.memberCount).toFixed(1)); return {team,td,ppd}; });
+  const teamData = teams.map(team=>{const td=sprint.teams[team.id]; const ppd=parseFloat((td.total/team.memberCount).toFixed(1)); return {team,td,ppd};});
   const drillTd   = drillId?sprint.teams[drillId]:null;
   const drillTeam = TEAMS.find(t=>t.id===drillId);
   const maxPts    = drillTd?Math.max(...drillTd.members.map(m=>m.pts),1):1;
-
   return html`
     <div style=${{height:'100%',display:'flex',flexDirection:'column',gap:12,overflow:'hidden'}}>
       <div style=${{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,flexShrink:0}}>
-        <${StatCard} icon=${html`<${IcAlert} s=${14} c="#DE350B"/>`} label="Overloaded teams"  value=${teamData.filter(d=>d.ppd>8).length}  sub=">8 pts/dev threshold"    accent="#DE350B"/>
-        <${StatCard} icon=${html`<${IcTrend} s=${14} c="#0052CC"/>`} label="Teams with slack"  value=${teamData.filter(d=>d.ppd<5).length}  sub="<5 pts/dev available"    accent="#0052CC"/>
-        <${StatCard} icon=${html`<${IcBar}   s=${14} c="#6554C0"/>`} label="Total sprint pts"  value=${teamData.reduce((a,d)=>a+d.td.total,0)} sub=${'across '+teams.length+' teams'} accent="#6554C0"/>
-        <${StatCard} icon=${html`<${IcCheck} s=${14} c="#00875A"/>`} label="Sprint"             value=${sprint.name} sub=${sprint.state+' · '+sprint.start+' → '+sprint.end} accent="#00875A"/>
+        <${StatCard} icon=${html`<${IcAlert} s=${14} c="#DE350B"/>`} label="Overloaded teams" value=${teamData.filter(d=>d.ppd>8).length}  sub=">8 pts/dev threshold"    accent="#DE350B"/>
+        <${StatCard} icon=${html`<${IcTrend} s=${14} c="#0052CC"/>`} label="Teams with slack" value=${teamData.filter(d=>d.ppd<5).length}  sub="<5 pts/dev available"    accent="#0052CC"/>
+        <${StatCard} icon=${html`<${IcBar}   s=${14} c="#6554C0"/>`} label="Total sprint pts" value=${teamData.reduce((a,d)=>a+d.td.total,0)} sub=${'across '+teams.length+' teams'} accent="#6554C0"/>
+        <${StatCard} icon=${html`<${IcCheck} s=${14} c="#00875A"/>`} label="Sprint"            value=${sprint.name} sub=${sprint.state+' · '+sprint.start+' → '+sprint.end} accent="#00875A"/>
       </div>
       <div style=${{flex:1,display:'flex',gap:12,minHeight:0}}>
         <div style=${{flex:1,display:'flex',flexDirection:'column',gap:10,overflowY:'auto'}}>
           ${teamData.map(({team,td,ppd})=>{
-            const c=loadColor(ppd), lbl=loadLabel(ppd);
+            const c=loadColor(ppd),lbl=loadLabel(ppd);
             const pct=td.total>0?Math.min(100,(td.done/td.total)*100):0;
             const overCt=td.members.filter(m=>m.status==='overloaded').length;
             const availCt=td.members.filter(m=>m.status==='available').length;
@@ -688,9 +893,7 @@ function CapacityHeatmap({selTeams,sprintId}) {
               <div key=${team.id} onClick=${()=>setDrillId(isDrill?null:team.id)}
                 style=${{background:C.bgSurface,border:'2px solid '+(isDrill?team.color:C.border),borderRadius:4,padding:14,cursor:'pointer',transition:'border-color .15s',boxShadow:C.shadow}}>
                 <div style=${{display:'flex',alignItems:'center',gap:12,marginBottom:10}}>
-                  <div style=${{width:32,height:32,borderRadius:6,background:team.color+'18',border:'2px solid '+team.color+'44',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:team.color}}>
-                    ${team.name.charAt(5)}
-                  </div>
+                  <div style=${{width:32,height:32,borderRadius:6,background:team.color+'18',border:'2px solid '+team.color+'44',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:team.color}}>${team.name.charAt(5)}</div>
                   <div style=${{flex:1}}>
                     <div style=${{display:'flex',alignItems:'center',gap:8}}>
                       <span style=${{fontSize:13,fontWeight:700,color:C.textHigh}}>${team.name}</span>
@@ -699,34 +902,22 @@ function CapacityHeatmap({selTeams,sprintId}) {
                     <div style=${{fontSize:11,color:C.textLow}}>${team.lead} · ${team.memberCount} devs</div>
                   </div>
                   <div style=${{display:'flex',alignItems:'center',gap:7,padding:'4px 10px',borderRadius:3,background:c+'14',border:'1px solid '+c+'33'}}>
-                    <div style=${{width:7,height:7,borderRadius:'50%',background:c}}/>
-                    <span style=${{fontSize:12,fontWeight:700,color:c}}>${lbl}</span>
-                    <span style=${{fontSize:11,color:C.textLow,fontFamily:'monospace'}}>${ppd} pt/dev</span>
+                    <div style=${{width:7,height:7,borderRadius:'50%',background:c}}/><span style=${{fontSize:12,fontWeight:700,color:c}}>${lbl}</span><span style=${{fontSize:11,color:C.textLow,fontFamily:'monospace'}}>${ppd} pt/dev</span>
                   </div>
-                  <div style=${{textAlign:'right'}}>
-                    <span style=${{fontSize:16,fontWeight:700,color:C.textHigh}}>${td.total}</span>
-                    <span style=${{fontSize:11,color:C.textLow}}> pts</span>
-                    ${sprint.state==='active'&&html`<div style=${{fontSize:10,color:C.textLow}}>${td.done} done</div>`}
-                  </div>
+                  <div style=${{textAlign:'right'}}><span style=${{fontSize:16,fontWeight:700,color:C.textHigh}}>${td.total}</span><span style=${{fontSize:11,color:C.textLow}}> pts</span>${sprint.state==='active'&&html`<div style=${{fontSize:10,color:C.textLow}}>${td.done} done</div>`}</div>
                 </div>
                 ${sprint.state==='active'&&html`
                   <div style=${{marginBottom:10}}>
-                    <div style=${{display:'flex',justifyContent:'space-between',fontSize:10,color:C.textLow,marginBottom:3}}>
-                      <span>Sprint progress</span><span>${Math.round(pct)}%</span>
-                    </div>
-                    <div style=${{height:6,background:C.bgSubtle,borderRadius:3,border:'1px solid '+C.borderLight,overflow:'hidden'}}>
-                      <div style=${{height:'100%',borderRadius:3,background:c,width:pct+'%',transition:'width .3s'}}/>
-                    </div>
+                    <div style=${{display:'flex',justifyContent:'space-between',fontSize:10,color:C.textLow,marginBottom:3}}><span>Sprint progress</span><span>${Math.round(pct)}%</span></div>
+                    <div style=${{height:6,background:C.bgSubtle,borderRadius:3,border:'1px solid '+C.borderLight,overflow:'hidden'}}><div style=${{height:'100%',borderRadius:3,background:c,width:pct+'%'}}/></div>
                   </div>`}
                 <div style=${{display:'flex',alignItems:'center',gap:4}}>
-                  ${td.members.map(m=>html`
-                    <div key=${m.n} title=${m.n+': '+m.pts+'pts'}
-                      style=${{width:26,height:26,borderRadius:'50%',background:m.status==='overloaded'?'#FFEBE6':m.status==='optimal'?'#E3FCEF':'#DEEBFF',
-                        border:'2px solid '+(m.status==='overloaded'?'#DE350B':m.status==='optimal'?'#00875A':'#4C9AFF'),
-                        display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,
-                        color:m.status==='overloaded'?'#DE350B':m.status==='optimal'?'#006644':'#0052CC'}}>
-                      ${m.av}
-                    </div>`)}
+                  ${td.members.map(m=>html`<div key=${m.n} title=${m.n+': '+m.pts+'pts'}
+                    style=${{width:26,height:26,borderRadius:'50%',background:m.status==='overloaded'?'#FFEBE6':m.status==='optimal'?'#E3FCEF':'#DEEBFF',
+                      border:'2px solid '+(m.status==='overloaded'?'#DE350B':m.status==='optimal'?'#00875A':'#4C9AFF'),
+                      display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,
+                      color:m.status==='overloaded'?'#DE350B':m.status==='optimal'?'#006644':'#0052CC'}}>
+                    ${m.av}</div>`)}
                   <span style=${{marginLeft:6,fontSize:10,color:C.textLow}}>
                     ${overCt>0?overCt+' overloaded':''}${overCt>0&&availCt>0?' · ':''}${availCt>0?availCt+' available':''}
                   </span>
@@ -743,52 +934,193 @@ function CapacityHeatmap({selTeams,sprintId}) {
             <div style=${{flex:1,overflowY:'auto',padding:16}}>
               <svg width="100%" height="150" viewBox="0 0 238 150" style=${{display:'block',marginBottom:16}}>
                 <rect width="238" height="150" fill="white"/>
-                ${drillTd.members.map((m,i)=>{
-                  const barH=Math.round((m.pts/maxPts)*110);
-                  const bw=Math.max(16,(238/drillTd.members.length)-8);
-                  const bx=4+i*(238/drillTd.members.length);
-                  const c=loadColor(m.pts);
-                  return html`
-                    <g key=${m.n}>
-                      <rect x=${bx} y=${135-barH} width=${bw} height=${barH} rx="3" fill=${c} fill-opacity="0.85"/>
-                      <text x=${bx+bw/2} y="148" text-anchor="middle" fill="#7A869A" font-size="9" font-family="-apple-system,sans-serif">${m.av}</text>
-                      <text x=${bx+bw/2} y=${130-barH} text-anchor="middle" fill=${c} font-size="9" font-family="-apple-system,sans-serif" font-weight="700">${m.pts}</text>
-                    </g>`;
-                })}
+                ${drillTd.members.map((m,i)=>{const barH=Math.round((m.pts/maxPts)*110); const bw=Math.max(16,(238/drillTd.members.length)-8); const bx=4+i*(238/drillTd.members.length); const c=loadColor(m.pts); return html`
+                  <g key=${m.n}>
+                    <rect x=${bx} y=${135-barH} width=${bw} height=${barH} rx="3" fill=${c} fill-opacity="0.85"/>
+                    <text x=${bx+bw/2} y="148" text-anchor="middle" fill="#7A869A" font-size="9" font-family="-apple-system,sans-serif">${m.av}</text>
+                    <text x=${bx+bw/2} y=${130-barH} text-anchor="middle" fill=${c} font-size="9" font-family="-apple-system,sans-serif" font-weight="700">${m.pts}</text>
+                  </g>`;})}
                 <line x1="0" y1="135" x2="238" y2="135" stroke="#DFE1E6" stroke-width="1"/>
               </svg>
-              ${drillTd.members.map(m=>{
-                const c=loadColor(m.pts);
-                return html`
-                  <div key=${m.n} style=${{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
-                    <div style=${{width:26,height:26,borderRadius:'50%',background:drillTeam.color+'18',border:'2px solid '+drillTeam.color+'44',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:drillTeam.color,flexShrink:0}}>${m.av}</div>
-                    <div style=${{flex:1,minWidth:0}}>
-                      <div style=${{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:3}}>
-                        <span style=${{fontSize:11,color:C.textHigh,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.n.split(' ')[0]}</span>
-                        <span style=${{fontSize:11,fontFamily:'monospace',fontWeight:700,color:c,flexShrink:0,marginLeft:4}}>${m.pts}pt</span>
-                      </div>
-                      <div style=${{height:5,background:C.bgSubtle,borderRadius:2,border:'1px solid '+C.borderLight,overflow:'hidden'}}>
-                        <div style=${{height:'100%',borderRadius:2,background:c,width:Math.min(100,(m.pts/20)*100)+'%'}}/>
-                      </div>
+              ${drillTd.members.map(m=>{const c=loadColor(m.pts); return html`
+                <div key=${m.n} style=${{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+                  <div style=${{width:26,height:26,borderRadius:'50%',background:drillTeam.color+'18',border:'2px solid '+drillTeam.color+'44',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:drillTeam.color,flexShrink:0}}>${m.av}</div>
+                  <div style=${{flex:1,minWidth:0}}>
+                    <div style=${{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:3}}>
+                      <span style=${{fontSize:11,color:C.textHigh,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>${m.n.split(' ')[0]}</span>
+                      <span style=${{fontSize:11,fontFamily:'monospace',fontWeight:700,color:c,flexShrink:0,marginLeft:4}}>${m.pts}pt</span>
                     </div>
-                  </div>`;
-              })}
-              <div style=${{marginTop:12,padding:'10px 12px',background:C.bgSubtle,border:'1px solid '+C.border,borderRadius:4}}>
-                <div style=${{fontSize:10,color:C.textMed,fontWeight:600}}>Load threshold: <span style=${{color:'#DE350B'}}>8 pts/dev</span></div>
-                <div style=${{display:'flex',gap:8,marginTop:6,flexWrap:'wrap'}}>
-                  ${[['#DE350B','>12'],['#FF5630','10–12'],['#00875A','7–10'],['#0052CC','4–7']].map(([color,label])=>html`
-                    <div key=${label} style=${{display:'flex',alignItems:'center',gap:4}}>
-                      <div style=${{width:6,height:6,borderRadius:'50%',background:color}}/>
-                      <span style=${{fontSize:10,color:C.textLow}}>${label}</span>
-                    </div>`)}
-                </div>
-              </div>
+                    <div style=${{height:5,background:C.bgSubtle,borderRadius:2,border:'1px solid '+C.borderLight,overflow:'hidden'}}><div style=${{height:'100%',borderRadius:2,background:c,width:Math.min(100,(m.pts/20)*100)+'%'}}/></div>
+                  </div>
+                </div>`;})}
             </div>
           </div>`
         : html`<div style=${{width:270,flexShrink:0,background:C.bgSurface,borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:C.shadow}}>
-            <div style=${{textAlign:'center',color:C.textLow}}>
-              <${IcBar} s=${28} c="#C1C7D0"/>
-              <p style=${{fontSize:12,marginTop:10,lineHeight:1.6,color:C.textLow}}>Click a team card to see<br/>member allocation</p>
+            <div style=${{textAlign:'center',color:C.textLow}}><${IcBar} s=${28} c="#C1C7D0"/><p style=${{fontSize:12,marginTop:10,lineHeight:1.6,color:C.textLow}}>Click a team card to see<br/>member allocation</p></div>
+          </div>`}
+      </div>
+    </div>`;
+}
+
+// ─── VIEW 5: TEAM LOAD MAP (TREEMAP) ─────────────────────────────────────────
+function TeamLoadMap({selTeams, sprintId}) {
+  const [hovInfo, setHovInfo] = useState(null);
+  const sprint = SPRINTS[sprintId];
+  const teams  = TEAMS.filter(t => selTeams.includes(t.id));
+
+  // Team-level treemap: each team sized by total sprint points
+  const teamItems = [...teams]
+    .map(t => ({ ...t, v: sprint.teams[t.id].total, td: sprint.teams[t.id] }))
+    .sort((a,b) => b.v - a.v);
+  const teamCells = treemapLayout(teamItems, 0, 0, 100, 100);
+
+  // Stats
+  const allMembers = teams.flatMap(t => sprint.teams[t.id].members);
+  const totalPts   = teams.reduce((s,t) => s + sprint.teams[t.id].total, 0);
+  const overloaded = allMembers.filter(m => m.status==='overloaded').length;
+  const available  = allMembers.filter(m => m.status==='available').length;
+
+  return html`
+    <div style=${{height:'100%',display:'flex',flexDirection:'column',gap:12,overflow:'hidden'}}>
+      <!-- Stat cards -->
+      <div style=${{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,flexShrink:0}}>
+        <${StatCard} icon=${html`<${IcAlert} s=${14} c="#DE350B"/>`} label="Overloaded devs" value=${overloaded}  sub="exceeding capacity threshold" accent="#DE350B"/>
+        <${StatCard} icon=${html`<${IcTrend} s=${14} c="#0052CC"/>`} label="Available devs"  value=${available}   sub="capacity available to absorb" accent="#0052CC"/>
+        <${StatCard} icon=${html`<${IcBar}   s=${14} c="#6554C0"/>`} label="Total pts"        value=${totalPts}    sub=${'across '+teams.length+' teams'} accent="#6554C0"/>
+        <${StatCard} icon=${html`<${IcGrid}  s=${14} c="#00875A"/>`} label="Sprint"           value=${sprint.name} sub=${sprint.state+' · '+sprint.end} accent="#00875A"/>
+      </div>
+
+      <!-- Legend -->
+      <div style=${{display:'flex',alignItems:'center',gap:16,flexShrink:0,padding:'6px 12px',background:C.bgSurface,borderRadius:4,boxShadow:C.shadow}}>
+        <span style=${{fontSize:11,fontWeight:700,color:C.textLow}}>Load:</span>
+        ${[
+          {color:'#7F1D1D',label:'Critical (15+pt)'},
+          {color:'#B91C1C',label:'Overloaded (10–14pt)'},
+          {color:'#14532D',label:'Optimal (7–9pt)'},
+          {color:'#15803D',label:'Good (4–6pt)'},
+          {color:'#1E3A8A',label:'Available (2–4pt)'},
+          {color:'#374151',label:'Slack (<2pt)'},
+        ].map(({color,label}) => html`
+          <div key=${label} style=${{display:'flex',alignItems:'center',gap:5}}>
+            <div style=${{width:12,height:12,borderRadius:2,background:color,flexShrink:0}}/>
+            <span style=${{fontSize:10,color:C.textMed}}>${label}</span>
+          </div>`)}
+        <div style=${{marginLeft:'auto',fontSize:10,color:C.textLow}}>Block size = story points · Hover for details</div>
+      </div>
+
+      <!-- Treemap -->
+      <div style=${{flex:1,position:'relative',minHeight:0,overflow:'hidden',borderRadius:4,background:'#1a1a1a'}}>
+        ${teamCells.map(cell => {
+          const devItems = [...cell.td.members]
+            .sort((a,b) => b.pts - a.pts)
+            .map(m => ({ ...m, v: Math.max(m.pts, 1) }));
+          const devCells = treemapLayout(devItems, 0, 0, 100, 100);
+          const HEADER_PCT = Math.min(14, (28 / 500) * 100); // ~28px header as % of ~500px height
+
+          return html`
+            <div key=${cell.id}
+              style=${{
+                position:'absolute',
+                left:'calc('+cell.x+'% + 2px)',
+                top:'calc('+cell.y+'% + 2px)',
+                width:'calc('+cell.w+'% - 4px)',
+                height:'calc('+cell.h+'% - 4px)',
+                overflow:'hidden',
+                borderRadius:3,
+              }}>
+              <!-- Team header strip -->
+              <div style=${{
+                position:'absolute',top:0,left:0,right:0,height:28,zIndex:2,
+                background:cell.color+'DD',
+                display:'flex',alignItems:'center',justifyContent:'space-between',
+                padding:'0 10px',
+              }}>
+                <span style=${{fontSize:11,fontWeight:700,color:'white',whiteSpace:'nowrap',textShadow:'0 1px 2px rgba(0,0,0,0.5)'}}>${cell.name}</span>
+                <span style=${{fontSize:10,color:'rgba(255,255,255,0.8)',whiteSpace:'nowrap',textShadow:'0 1px 2px rgba(0,0,0,0.5)'}}>${cell.td.total}pt · ${cell.td.members.length}👤</span>
+              </div>
+
+              <!-- Developer treemap cells -->
+              <div style=${{position:'absolute',top:28,left:0,right:0,bottom:0}}>
+                ${devCells.map(dc => {
+                  const bg = heatColor(dc.status, dc.pts);
+                  const showLabel = dc.w > 12 && dc.h > 14;
+                  const showFull  = dc.w > 22 && dc.h > 28;
+                  const showPts   = dc.w > 14 && dc.h > 22;
+                  const pctDone   = dc.pts > 0 && sprint.state==='active' ? Math.round((dc.done/dc.pts)*100) : null;
+
+                  return html`
+                    <div key=${dc.n}
+                      onMouseEnter=${() => setHovInfo({ n:dc.n, pts:dc.pts, done:dc.done, status:dc.status, team:cell.name, color:cell.color, bg })}
+                      onMouseLeave=${() => setHovInfo(null)}
+                      style=${{
+                        position:'absolute',
+                        left:'calc('+dc.x+'% + 1px)',
+                        top:'calc('+dc.y+'% + 1px)',
+                        width:'calc('+dc.w+'% - 2px)',
+                        height:'calc('+dc.h+'% - 2px)',
+                        background:bg,
+                        overflow:'hidden',
+                        display:'flex',
+                        flexDirection:'column',
+                        alignItems:'center',
+                        justifyContent:'center',
+                        cursor:'default',
+                        transition:'filter .15s',
+                      }}
+                      onMouseOver=${e=>{e.currentTarget.style.filter='brightness(1.25)'}}
+                      onMouseOut=${e=>{e.currentTarget.style.filter='brightness(1)'}}>
+                      ${showLabel && html`
+                        <span style=${{fontSize:showFull?11:10,fontWeight:700,color:'rgba(255,255,255,0.95)',lineHeight:1.2,textAlign:'center',padding:'0 2px',textShadow:'0 1px 3px rgba(0,0,0,0.5)'}}>
+                          ${showFull ? dc.n.split(' ')[0] : dc.av}
+                        </span>`}
+                      ${showPts && html`
+                        <span style=${{fontSize:9,color:'rgba(255,255,255,0.75)',lineHeight:1.2,textShadow:'0 1px 2px rgba(0,0,0,0.5)'}}>
+                          ${dc.pts}pt${pctDone!==null?' · '+pctDone+'%':''}
+                        </span>`}
+                      ${sprint.state==='active' && dc.done>0 && dc.w>16 && dc.h>16 && html`
+                        <div style=${{
+                          position:'absolute',bottom:0,left:0,
+                          height:3,
+                          width:Math.min(100,(dc.done/dc.pts)*100)+'%',
+                          background:'rgba(255,255,255,0.5)',
+                          borderRadius:'0 1px 0 0',
+                        }}/>`}
+                    </div>`;
+                })}
+              </div>
+            </div>`;
+        })}
+
+        <!-- Hover tooltip -->
+        ${hovInfo && html`
+          <div style=${{
+            position:'absolute',top:40,right:16,
+            background:'rgba(23,43,77,0.96)',
+            borderRadius:6,padding:'10px 14px',
+            zIndex:20,pointerEvents:'none',
+            border:'1px solid rgba(255,255,255,0.12)',
+            minWidth:180,
+            boxShadow:'0 4px 16px rgba(0,0,0,0.4)',
+          }}>
+            <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+              <div style=${{width:10,height:10,borderRadius:2,background:hovInfo.bg,flexShrink:0}}/>
+              <span style=${{fontSize:13,fontWeight:700,color:'white'}}>${hovInfo.n}</span>
+            </div>
+            <div style=${{fontSize:11,color:'rgba(255,255,255,0.55)',marginBottom:8}}>${hovInfo.team}</div>
+            <div style=${{display:'flex',flexDirection:'column',gap:4}}>
+              <div style=${{display:'flex',justifyContent:'space-between',gap:16}}>
+                <span style=${{fontSize:11,color:'rgba(255,255,255,0.55)'}}>Story points</span>
+                <span style=${{fontSize:11,fontWeight:700,color:'white',fontFamily:'monospace'}}>${hovInfo.pts} pt</span>
+              </div>
+              ${sprint.state==='active' && html`
+                <div style=${{display:'flex',justifyContent:'space-between',gap:16}}>
+                  <span style=${{fontSize:11,color:'rgba(255,255,255,0.55)'}}>Completed</span>
+                  <span style=${{fontSize:11,fontWeight:700,color:'white',fontFamily:'monospace'}}>${hovInfo.done} pt (${hovInfo.pts>0?Math.round((hovInfo.done/hovInfo.pts)*100):0}%)</span>
+                </div>`}
+              <div style=${{display:'flex',justifyContent:'space-between',gap:16}}>
+                <span style=${{fontSize:11,color:'rgba(255,255,255,0.55)'}}>Status</span>
+                <span style=${{fontSize:11,fontWeight:700,color:hovInfo.bg,textTransform:'capitalize'}}>${hovInfo.status}</span>
+              </div>
             </div>
           </div>`}
       </div>
@@ -797,13 +1129,13 @@ function CapacityHeatmap({selTeams,sprintId}) {
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 function App() {
-  const [authed,   setAuthed]   = useState(false);
-  const [view,     setView]     = useState('alignment');
-  const [selTeams, setSelTeams] = useState(TEAMS.map(t=>t.id));
-  const [sprintId, setSprintId] = useState(42);
-  const [collapsed,setCollapsed]= useState(false);
+  const [authed,    setAuthed]    = useState(false);
+  const [view,      setView]      = useState('alignment');
+  const [selTeams,  setSelTeams]  = useState(TEAMS.map(t=>t.id));
+  const [sprintId,  setSprintId]  = useState(42);
+  const [collapsed, setCollapsed] = useState(false);
 
-  const toggleTeam = id => setSelTeams(prev=>prev.includes(id)?prev.filter(t=>t!==id):[...prev,id]);
+  const toggleTeam = id => setSelTeams(prev => prev.includes(id) ? prev.filter(t=>t!==id) : [...prev,id]);
 
   if (!authed) return html`<${LoginScreen} onLogin=${()=>setAuthed(true)}/>`;
 
@@ -812,6 +1144,7 @@ function App() {
     duplicates:   html`<${DuplicateWorkDetector} selTeams=${selTeams}/>`,
     dependencies: html`<${SharedDependencyGraph} selTeams=${selTeams}/>`,
     capacity:     html`<${CapacityHeatmap}       selTeams=${selTeams} sprintId=${sprintId}/>`,
+    loadmap:      html`<${TeamLoadMap}           selTeams=${selTeams} sprintId=${sprintId}/>`,
   };
 
   return html`
