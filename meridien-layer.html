@@ -1031,17 +1031,26 @@ function TeamLoadMap({selTeams, sprintId}) {
               }}>
               <!-- Team header strip -->
               <div style=${{
-                position:'absolute',top:0,left:0,right:0,height:28,zIndex:2,
-                background:cell.color+'DD',
+                position:'absolute',top:0,left:0,right:0,height:32,zIndex:2,
+                background:'#FFFFFF',
+                borderBottom:'1px solid rgba(9,30,66,0.08)',
                 display:'flex',alignItems:'center',justifyContent:'space-between',
-                padding:'0 10px',
+                padding:'0 10px',gap:7,
               }}>
-                <span style=${{fontSize:11,fontWeight:700,color:'white',whiteSpace:'nowrap',textShadow:'0 1px 2px rgba(0,0,0,0.5)'}}>${cell.name}</span>
-                <span style=${{fontSize:10,color:'rgba(255,255,255,0.8)',whiteSpace:'nowrap',textShadow:'0 1px 2px rgba(0,0,0,0.5)'}}>${cell.td.total}pt · ${cell.td.members.length}👤</span>
+                <div style=${{display:'flex',alignItems:'center',gap:7,minWidth:0}}>
+                  <div style=${{
+                    width:20,height:20,borderRadius:'50%',flexShrink:0,
+                    background:cell.color,
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                    fontSize:8,fontWeight:800,color:'white',letterSpacing:'0.03em',
+                  }}>${cell.name.split(' ').map(w=>w[0]).join('')}</div>
+                  <span style=${{fontSize:11,fontWeight:700,color:'#172B4D',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>${cell.name}</span>
+                </div>
+                <span style=${{fontSize:10,color:'#6B778C',whiteSpace:'nowrap',flexShrink:0}}>${cell.td.total}pt · ${cell.td.members.length}👤</span>
               </div>
 
               <!-- Developer treemap cells -->
-              <div style=${{position:'absolute',top:28,left:0,right:0,bottom:0}}>
+              <div style=${{position:'absolute',top:32,left:0,right:0,bottom:0}}>
                 ${devCells.map(dc => {
                   const bg = heatColor(dc.status, dc.pts);
                   const showLabel = dc.w > 12 && dc.h > 14;
