@@ -256,38 +256,94 @@ const SPRINTS = {
     id:42, name:'Sprint 42', state:'active', start:'2026-02-10', end:'2026-02-24',
     teams:{
       orion:     { total:78, done:41, members:[
-        {n:'Sarah Chen',   av:'SC',pts:18,done:9, status:'overloaded'},
-        {n:'Liam Torres',  av:'LT',pts:16,done:8, status:'overloaded'},
-        {n:'Ravi Krishnan',av:'RK',pts:15,done:8, status:'overloaded'},
-        {n:'Mei Nakamura', av:'MN',pts:12,done:7, status:'optimal'},
-        {n:'Tom Bradley',  av:'TB',pts:10,done:5, status:'optimal'},
-        {n:'Kat Diaz',     av:'KD',pts:7, done:4, status:'optimal'} ] },
+        {n:'Sarah Chen',   av:'SC',pts:18,done:9, status:'overloaded', stories:[
+          {key:'ORN-201',title:'Auth service PKCE flow refactor',      pts:8,status:'In Progress'},
+          {key:'ORN-202',title:'Token refresh race condition fix',      pts:5,status:'Done'},
+          {key:'ORN-203',title:'OAuth 2.0 scope validation layer',      pts:5,status:'In Review'}]},
+        {n:'Liam Torres',  av:'LT',pts:16,done:8, status:'overloaded', stories:[
+          {key:'ORN-204',title:'Migrate REST endpoints to GraphQL',     pts:8,status:'In Progress'},
+          {key:'ORN-205',title:'API rate limiter middleware',            pts:5,status:'In Progress'},
+          {key:'ORN-206',title:'Pagination for /issues endpoint',       pts:3,status:'In Review'}]},
+        {n:'Ravi Krishnan',av:'RK',pts:15,done:8, status:'overloaded', stories:[
+          {key:'ORN-207',title:'Redis cache layer for board data',      pts:8,status:'In Progress'},
+          {key:'ORN-208',title:'Cache invalidation on sprint close',    pts:4,status:'To Do'},
+          {key:'ORN-209',title:'Background job queue setup',            pts:3,status:'In Review'}]},
+        {n:'Mei Nakamura', av:'MN',pts:12,done:7, status:'optimal', stories:[
+          {key:'ORN-210',title:'Sprint velocity reporting API',         pts:5,status:'In Progress'},
+          {key:'ORN-211',title:'Epic burndown calculation service',     pts:4,status:'Done'},
+          {key:'ORN-212',title:'Story point normalisation utility',     pts:3,status:'In Review'}]},
+        {n:'Tom Bradley',  av:'TB',pts:10,done:5, status:'optimal', stories:[
+          {key:'ORN-213',title:'Unit tests for auth module',            pts:5,status:'Done'},
+          {key:'ORN-214',title:'Integration tests for Jira proxy',      pts:5,status:'In Progress'}]},
+        {n:'Kat Diaz',     av:'KD',pts:7, done:4, status:'optimal', stories:[
+          {key:'ORN-215',title:'Update OpenAPI spec for v2 endpoints',  pts:4,status:'In Progress'},
+          {key:'ORN-216',title:'Fix flaky webhook test suite',          pts:3,status:'Done'}]} ] },
       andromeda: { total:45, done:28, members:[
-        {n:'Marcus Webb',  av:'MW',pts:9, done:6, status:'optimal'},
-        {n:'Nina Park',    av:'NP',pts:8, done:5, status:'optimal'},
-        {n:'Dev Sharma',   av:'DS',pts:8, done:5, status:'optimal'},
-        {n:'Chloe Martin', av:'CM',pts:7, done:5, status:'optimal'},
-        {n:'Aiden Kim',    av:'AK',pts:6, done:4, status:'optimal'},
-        {n:'Rosa Lima',    av:'RL',pts:5, done:2, status:'available'},
-        {n:'Sam Hughes',   av:'SH',pts:2, done:1, status:'available'} ] },
+        {n:'Marcus Webb',  av:'MW',pts:9, done:6, status:'optimal', stories:[
+          {key:'AND-101',title:'Dashboard skeleton loading states',     pts:5,status:'Done'},
+          {key:'AND-102',title:'Team selector dropdown component',      pts:4,status:'In Progress'}]},
+        {n:'Nina Park',    av:'NP',pts:8, done:5, status:'optimal', stories:[
+          {key:'AND-103',title:'Feature alignment matrix layout',       pts:5,status:'In Progress'},
+          {key:'AND-104',title:'Empty state illustrations',             pts:3,status:'To Do'}]},
+        {n:'Dev Sharma',   av:'DS',pts:8, done:5, status:'optimal', stories:[
+          {key:'AND-105',title:'Duplicate detector results UI',         pts:5,status:'In Review'},
+          {key:'AND-106',title:'Side-by-side ticket diff component',    pts:3,status:'In Progress'}]},
+        {n:'Chloe Martin', av:'CM',pts:7, done:5, status:'optimal', stories:[
+          {key:'AND-107',title:'Dark/light theme design tokens',        pts:4,status:'Done'},
+          {key:'AND-108',title:'Tailwind config refactor',              pts:3,status:'In Review'}]},
+        {n:'Aiden Kim',    av:'AK',pts:6, done:4, status:'optimal', stories:[
+          {key:'AND-109',title:'Responsive sidebar collapse animation', pts:3,status:'Done'},
+          {key:'AND-110',title:'Mobile breakpoint layout fixes',        pts:3,status:'In Progress'}]},
+        {n:'Rosa Lima',    av:'RL',pts:5, done:2, status:'available', stories:[
+          {key:'AND-111',title:'Accessibility audit remediation',       pts:5,status:'In Progress'}]},
+        {n:'Sam Hughes',   av:'SH',pts:2, done:1, status:'available', stories:[
+          {key:'AND-112',title:'Update Storybook component stories',    pts:2,status:'To Do'}]} ] },
       pegasus:   { total:52, done:22, members:[
-        {n:'Priya Nair',   av:'PN',pts:16,done:7, status:'overloaded'},
-        {n:'Jordan Scott', av:'JS',pts:13,done:5, status:'overloaded'},
-        {n:'Mia Chen',     av:'MC',pts:10,done:5, status:'optimal'},
-        {n:'Eli Watts',    av:'EW',pts:8, done:3, status:'optimal'},
-        {n:'Isha Patel',   av:'IP',pts:5, done:2, status:'available'} ] },
+        {n:'Priya Nair',   av:'PN',pts:16,done:7, status:'overloaded', stories:[
+          {key:'PEG-301',title:'iOS push notification service',         pts:8,status:'In Progress'},
+          {key:'PEG-302',title:'Background sync for offline mode',      pts:5,status:'In Progress'},
+          {key:'PEG-303',title:'App launch time optimisation',          pts:3,status:'In Review'}]},
+        {n:'Jordan Scott', av:'JS',pts:13,done:5, status:'overloaded', stories:[
+          {key:'PEG-304',title:'Android deep link handling',            pts:8,status:'In Progress'},
+          {key:'PEG-305',title:'Crash reporting SDK integration',       pts:5,status:'In Review'}]},
+        {n:'Mia Chen',     av:'MC',pts:10,done:5, status:'optimal', stories:[
+          {key:'PEG-306',title:'React Native upgrade to 0.74',          pts:5,status:'In Progress'},
+          {key:'PEG-307',title:'Navigation stack refactor',             pts:5,status:'In Progress'}]},
+        {n:'Eli Watts',    av:'EW',pts:8, done:3, status:'optimal', stories:[
+          {key:'PEG-308',title:'Camera permission handling flows',      pts:5,status:'Done'},
+          {key:'PEG-309',title:'Biometric auth screen',                 pts:3,status:'In Review'}]},
+        {n:'Isha Patel',   av:'IP',pts:5, done:2, status:'available', stories:[
+          {key:'PEG-310',title:'QA automation test scripts',            pts:5,status:'In Progress'}]} ] },
       lyra:      { total:28, done:20, members:[
-        {n:'James Okafor', av:'JO',pts:7, done:5, status:'optimal'},
-        {n:'Zoe Fischer',  av:'ZF',pts:6, done:5, status:'optimal'},
-        {n:'Leo Wang',     av:'LW',pts:5, done:4, status:'available'},
-        {n:'Nora Bell',    av:'NB',pts:4, done:3, status:'available'},
-        {n:'Omar Ali',     av:'OA',pts:4, done:2, status:'available'},
-        {n:'Grace Kim',    av:'GK',pts:2, done:1, status:'available'} ] },
+        {n:'James Okafor', av:'JO',pts:7, done:5, status:'optimal', stories:[
+          {key:'LYR-401',title:'Kafka consumer lag alerting',           pts:4,status:'Done'},
+          {key:'LYR-402',title:'Spark job memory optimisation',         pts:3,status:'In Progress'}]},
+        {n:'Zoe Fischer',  av:'ZF',pts:6, done:5, status:'optimal', stories:[
+          {key:'LYR-403',title:'Redshift query performance tuning',     pts:3,status:'Done'},
+          {key:'LYR-404',title:'dbt model for sprint velocity',         pts:3,status:'In Review'}]},
+        {n:'Leo Wang',     av:'LW',pts:5, done:4, status:'available', stories:[
+          {key:'LYR-405',title:'Looker dashboard for team velocity',    pts:5,status:'In Progress'}]},
+        {n:'Nora Bell',    av:'NB',pts:4, done:3, status:'available', stories:[
+          {key:'LYR-406',title:'Data quality checks pipeline',          pts:4,status:'Done'}]},
+        {n:'Omar Ali',     av:'OA',pts:4, done:2, status:'available', stories:[
+          {key:'LYR-407',title:'Feature flag usage analytics',          pts:4,status:'In Progress'}]},
+        {n:'Grace Kim',    av:'GK',pts:2, done:1, status:'available', stories:[
+          {key:'LYR-408',title:'Update data dictionary docs',           pts:2,status:'Done'}]} ] },
       vega:      { total:35, done:18, members:[
-        {n:'Ana Sousa',    av:'AS',pts:11,done:6, status:'overloaded'},
-        {n:'Carlos Lima',  av:'CL',pts:10,done:5, status:'optimal'},
-        {n:'Tara Singh',   av:'TS',pts:9, done:5, status:'optimal'},
-        {n:'Ben Fox',      av:'BF',pts:5, done:2, status:'available'} ] },
+        {n:'Ana Sousa',    av:'AS',pts:11,done:6, status:'overloaded', stories:[
+          {key:'VEG-501',title:'Kubernetes cluster autoscaling policy', pts:5,status:'In Progress'},
+          {key:'VEG-502',title:'AWS cost optimisation review',          pts:3,status:'In Progress'},
+          {key:'VEG-503',title:'Multi-region failover configuration',   pts:3,status:'To Do'}]},
+        {n:'Carlos Lima',  av:'CL',pts:10,done:5, status:'optimal', stories:[
+          {key:'VEG-504',title:'CI/CD pipeline for monorepo builds',    pts:5,status:'In Progress'},
+          {key:'VEG-505',title:'GitHub Actions cache optimisation',     pts:3,status:'Done'},
+          {key:'VEG-506',title:'Deploy preview environments',           pts:2,status:'In Review'}]},
+        {n:'Tara Singh',   av:'TS',pts:9, done:5, status:'optimal', stories:[
+          {key:'VEG-507',title:'Prometheus alerting rules setup',       pts:5,status:'In Progress'},
+          {key:'VEG-508',title:'Grafana dashboard refresh',             pts:4,status:'In Review'}]},
+        {n:'Ben Fox',      av:'BF',pts:5, done:2, status:'available', stories:[
+          {key:'VEG-509',title:'SSL certificate rotation automation',   pts:3,status:'Done'},
+          {key:'VEG-510',title:'DNS failover testing runbook',          pts:2,status:'In Progress'}]} ] },
     }
   },
   43: {
@@ -963,8 +1019,11 @@ function CapacityHeatmap({selTeams,sprintId}) {
 }
 
 // ─── VIEW 5: TEAM LOAD MAP (TREEMAP) ─────────────────────────────────────────
+const STORY_DOT = {'In Progress':'#0052CC','In Review':'#6554C0','Done':'#00875A','To Do':'#6B778C'};
+
 function TeamLoadMap({selTeams, sprintId}) {
-  const [hovInfo, setHovInfo] = useState(null);
+  const [hovInfo,   setHovInfo]   = useState(null);
+  const [mousePos,  setMousePos]  = useState({x:0, y:0});
   const sprint = SPRINTS[sprintId];
   const teams  = TEAMS.filter(t => selTeams.includes(t.id));
 
@@ -1009,7 +1068,9 @@ function TeamLoadMap({selTeams, sprintId}) {
       </div>
 
       <!-- Treemap -->
-      <div style=${{flex:1,position:'relative',minHeight:0,overflow:'hidden',borderRadius:6,background:'transparent'}}>
+      <div
+        onMouseMove=${e => setMousePos({x: e.clientX, y: e.clientY})}
+        style=${{flex:1,position:'relative',minHeight:0,overflow:'hidden',borderRadius:6,background:'transparent'}}>
         ${teamCells.map(cell => {
           const devItems = [...cell.td.members]
             .sort((a,b) => b.pts - a.pts)
@@ -1060,7 +1121,7 @@ function TeamLoadMap({selTeams, sprintId}) {
 
                   return html`
                     <div key=${dc.n}
-                      onMouseEnter=${() => setHovInfo({ n:dc.n, pts:dc.pts, done:dc.done, status:dc.status, team:cell.name, color:cell.color, bg })}
+                      onMouseEnter=${() => setHovInfo({ n:dc.n, pts:dc.pts, done:dc.done, status:dc.status, team:cell.name, color:cell.color, bg, stories:dc.stories||[] })}
                       onMouseLeave=${() => setHovInfo(null)}
                       style=${{
                         position:'absolute',
@@ -1101,37 +1162,64 @@ function TeamLoadMap({selTeams, sprintId}) {
             </div>`;
         })}
 
-        <!-- Hover tooltip -->
+        <!-- Hover tooltip — cursor following, fixed position -->
         ${hovInfo && html`
           <div style=${{
-            position:'absolute',top:40,right:16,
-            background:'rgba(23,43,77,0.96)',
-            borderRadius:6,padding:'10px 14px',
-            zIndex:20,pointerEvents:'none',
+            position:'fixed',
+            left: mousePos.x + 16,
+            top:  mousePos.y + 16,
+            transform: mousePos.x > window.innerWidth  - 260 ? 'translateX(-110%)' : 'none',
+            background:'rgba(23,43,77,0.97)',
+            borderRadius:8,padding:'12px 14px',
+            zIndex:9999,pointerEvents:'none',
             border:'1px solid rgba(255,255,255,0.12)',
-            minWidth:180,
-            boxShadow:'0 4px 16px rgba(0,0,0,0.4)',
+            width:240,
+            boxShadow:'0 6px 24px rgba(0,0,0,0.5)',
           }}>
-            <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+            <!-- Header -->
+            <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
               <div style=${{width:10,height:10,borderRadius:2,background:hovInfo.bg,flexShrink:0}}/>
-              <span style=${{fontSize:13,fontWeight:700,color:'white'}}>${hovInfo.n}</span>
+              <span style=${{fontSize:13,fontWeight:700,color:'white',flex:1}}>${hovInfo.n}</span>
+              <span style=${{fontSize:10,fontWeight:700,color:hovInfo.bg,textTransform:'uppercase',letterSpacing:'0.04em'}}>${hovInfo.status}</span>
             </div>
-            <div style=${{fontSize:11,color:'rgba(255,255,255,0.55)',marginBottom:8}}>${hovInfo.team}</div>
-            <div style=${{display:'flex',flexDirection:'column',gap:4}}>
-              <div style=${{display:'flex',justifyContent:'space-between',gap:16}}>
-                <span style=${{fontSize:11,color:'rgba(255,255,255,0.55)'}}>Story points</span>
-                <span style=${{fontSize:11,fontWeight:700,color:'white',fontFamily:'monospace'}}>${hovInfo.pts} pt</span>
+            <div style=${{fontSize:10,color:'rgba(255,255,255,0.45)',marginBottom:10}}>${hovInfo.team}</div>
+
+            <!-- Pts row -->
+            <div style=${{display:'flex',gap:12,marginBottom:10}}>
+              <div style=${{flex:1,background:'rgba(255,255,255,0.06)',borderRadius:4,padding:'5px 8px',textAlign:'center'}}>
+                <div style=${{fontSize:15,fontWeight:800,color:'white',fontFamily:'monospace'}}>${hovInfo.pts}</div>
+                <div style=${{fontSize:9,color:'rgba(255,255,255,0.45)',marginTop:1}}>TOTAL PT</div>
               </div>
               ${sprint.state==='active' && html`
-                <div style=${{display:'flex',justifyContent:'space-between',gap:16}}>
-                  <span style=${{fontSize:11,color:'rgba(255,255,255,0.55)'}}>Completed</span>
-                  <span style=${{fontSize:11,fontWeight:700,color:'white',fontFamily:'monospace'}}>${hovInfo.done} pt (${hovInfo.pts>0?Math.round((hovInfo.done/hovInfo.pts)*100):0}%)</span>
+                <div style=${{flex:1,background:'rgba(255,255,255,0.06)',borderRadius:4,padding:'5px 8px',textAlign:'center'}}>
+                  <div style=${{fontSize:15,fontWeight:800,color:'#00875A',fontFamily:'monospace'}}>${hovInfo.done}</div>
+                  <div style=${{fontSize:9,color:'rgba(255,255,255,0.45)',marginTop:1}}>DONE PT</div>
+                </div>
+                <div style=${{flex:1,background:'rgba(255,255,255,0.06)',borderRadius:4,padding:'5px 8px',textAlign:'center'}}>
+                  <div style=${{fontSize:15,fontWeight:800,color:'#4C9AFF',fontFamily:'monospace'}}>${hovInfo.pts>0?Math.round((hovInfo.done/hovInfo.pts)*100):0}%</div>
+                  <div style=${{fontSize:9,color:'rgba(255,255,255,0.45)',marginTop:1}}>COMPLETE</div>
                 </div>`}
-              <div style=${{display:'flex',justifyContent:'space-between',gap:16}}>
-                <span style=${{fontSize:11,color:'rgba(255,255,255,0.55)'}}>Status</span>
-                <span style=${{fontSize:11,fontWeight:700,color:hovInfo.bg,textTransform:'capitalize'}}>${hovInfo.status}</span>
-              </div>
             </div>
+
+            <!-- Stories list -->
+            ${hovInfo.stories.length > 0 && html`
+              <div style=${{borderTop:'1px solid rgba(255,255,255,0.1)',paddingTop:8}}>
+                <div style=${{fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.35)',letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:6}}>Stories in sprint</div>
+                <div style=${{display:'flex',flexDirection:'column',gap:5}}>
+                  ${hovInfo.stories.map(s => html`
+                    <div key=${s.key} style=${{display:'flex',alignItems:'flex-start',gap:7}}>
+                      <div style=${{width:6,height:6,borderRadius:'50%',background:STORY_DOT[s.status]||'#6B778C',flexShrink:0,marginTop:3}}/>
+                      <div style=${{flex:1,minWidth:0}}>
+                        <div style=${{fontSize:10,color:'rgba(255,255,255,0.85)',lineHeight:1.35,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>${s.title}</div>
+                        <div style=${{display:'flex',alignItems:'center',gap:5,marginTop:2}}>
+                          <span style=${{fontSize:9,color:'rgba(255,255,255,0.35)',fontFamily:'monospace'}}>${s.key}</span>
+                          <span style=${{fontSize:9,color:STORY_DOT[s.status]||'#6B778C'}}>${s.status}</span>
+                        </div>
+                      </div>
+                      <span style=${{fontSize:9,color:'rgba(255,255,255,0.4)',fontFamily:'monospace',flexShrink:0,marginTop:1}}>${s.pts}pt</span>
+                    </div>`)}
+                </div>
+              </div>`}
           </div>`}
       </div>
     </div>`;
