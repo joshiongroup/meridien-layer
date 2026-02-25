@@ -1009,7 +1009,7 @@ function TeamLoadMap({selTeams, sprintId}) {
       </div>
 
       <!-- Treemap -->
-      <div style=${{flex:1,position:'relative',minHeight:0,overflow:'hidden',borderRadius:4,background:'#1a1a1a'}}>
+      <div style=${{flex:1,position:'relative',minHeight:0,overflow:'hidden',borderRadius:6,background:'#FFFFFF'}}>
         ${teamCells.map(cell => {
           const devItems = [...cell.td.members]
             .sort((a,b) => b.pts - a.pts)
@@ -1021,12 +1021,13 @@ function TeamLoadMap({selTeams, sprintId}) {
             <div key=${cell.id}
               style=${{
                 position:'absolute',
-                left:'calc('+cell.x+'% + 2px)',
-                top:'calc('+cell.y+'% + 2px)',
-                width:'calc('+cell.w+'% - 4px)',
-                height:'calc('+cell.h+'% - 4px)',
+                left:'calc('+cell.x+'% + 8px)',
+                top:'calc('+cell.y+'% + 8px)',
+                width:'calc('+cell.w+'% - 16px)',
+                height:'calc('+cell.h+'% - 16px)',
                 overflow:'hidden',
-                borderRadius:3,
+                borderRadius:8,
+                boxShadow:'0 2px 8px rgba(9,30,66,0.16)',
               }}>
               <!-- Team header strip -->
               <div style=${{
@@ -1054,10 +1055,10 @@ function TeamLoadMap({selTeams, sprintId}) {
                       onMouseLeave=${() => setHovInfo(null)}
                       style=${{
                         position:'absolute',
-                        left:'calc('+dc.x+'% + 1px)',
-                        top:'calc('+dc.y+'% + 1px)',
-                        width:'calc('+dc.w+'% - 2px)',
-                        height:'calc('+dc.h+'% - 2px)',
+                        left:'calc('+dc.x+'% + 2px)',
+                        top:'calc('+dc.y+'% + 2px)',
+                        width:'calc('+dc.w+'% - 4px)',
+                        height:'calc('+dc.h+'% - 4px)',
                         background:bg,
                         overflow:'hidden',
                         display:'flex',
