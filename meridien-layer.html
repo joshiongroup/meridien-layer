@@ -64,9 +64,9 @@ const TICKET_TYPE_COLOR = { Story:'#0052CC', Task:'#00875A', Bug:'#DE350B', Epic
 const loadColor  = p => p>=12?'#DE350B':p>=10?'#FF5630':p>=7?'#00875A':p>=4?'#0052CC':'#7A869A';
 const loadLabel  = p => p>=12?'Critical':p>=10?'Overloaded':p>=7?'Optimal':p>=4?'Light':'Slack';
 const heatColor  = (status, pts) => {
-  if (status==='overloaded') return pts>=15?'#7F1D1D':pts>=12?'#991B1B':'#B91C1C';
-  if (status==='optimal')    return pts>=10?'#14532D':pts>=7?'#166534':'#15803D';
-  /* available */            return pts>=5?'#1E3A8A':pts>=3?'#1D4ED8':'#374151';
+  if (status==='overloaded') return pts>=15?'#B91C1C':pts>=12?'#DC2626':'#EF4444';
+  if (status==='optimal')    return pts>=10?'#15803D':pts>=7?'#16A34A':'#22C55E';
+  /* available */            return pts>=5?'#1D4ED8':pts>=3?'#2563EB':'#3B82F6';
 };
 
 // ─── TREEMAP LAYOUT ───────────────────────────────────────────────────────────
@@ -1162,61 +1162,61 @@ function TeamLoadMap({selTeams, sprintId}) {
             </div>`;
         })}
 
-        <!-- Hover tooltip — cursor following, fixed position -->
+        <!-- Hover tooltip — cursor following, light theme -->
         ${hovInfo && html`
           <div style=${{
             position:'fixed',
             left: mousePos.x + 16,
             top:  mousePos.y + 16,
-            transform: mousePos.x > window.innerWidth  - 260 ? 'translateX(-110%)' : 'none',
-            background:'rgba(23,43,77,0.97)',
+            transform: mousePos.x > window.innerWidth - 260 ? 'translateX(-110%)' : 'none',
+            background:'#FFFFFF',
             borderRadius:8,padding:'12px 14px',
             zIndex:9999,pointerEvents:'none',
-            border:'1px solid rgba(255,255,255,0.12)',
+            border:'1px solid rgba(9,30,66,0.14)',
             width:240,
-            boxShadow:'0 6px 24px rgba(0,0,0,0.5)',
+            boxShadow:'0 4px 20px rgba(9,30,66,0.18)',
           }}>
             <!-- Header -->
-            <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+            <div style=${{display:'flex',alignItems:'center',gap:8,marginBottom:3}}>
               <div style=${{width:10,height:10,borderRadius:2,background:hovInfo.bg,flexShrink:0}}/>
-              <span style=${{fontSize:13,fontWeight:700,color:'white',flex:1}}>${hovInfo.n}</span>
+              <span style=${{fontSize:13,fontWeight:700,color:'#172B4D',flex:1}}>${hovInfo.n}</span>
               <span style=${{fontSize:10,fontWeight:700,color:hovInfo.bg,textTransform:'uppercase',letterSpacing:'0.04em'}}>${hovInfo.status}</span>
             </div>
-            <div style=${{fontSize:10,color:'rgba(255,255,255,0.45)',marginBottom:10}}>${hovInfo.team}</div>
+            <div style=${{fontSize:10,color:'#6B778C',marginBottom:10}}>${hovInfo.team}</div>
 
             <!-- Pts row -->
-            <div style=${{display:'flex',gap:12,marginBottom:10}}>
-              <div style=${{flex:1,background:'rgba(255,255,255,0.06)',borderRadius:4,padding:'5px 8px',textAlign:'center'}}>
-                <div style=${{fontSize:15,fontWeight:800,color:'white',fontFamily:'monospace'}}>${hovInfo.pts}</div>
-                <div style=${{fontSize:9,color:'rgba(255,255,255,0.45)',marginTop:1}}>TOTAL PT</div>
+            <div style=${{display:'flex',gap:8,marginBottom:10}}>
+              <div style=${{flex:1,background:'#F4F5F7',borderRadius:4,padding:'5px 8px',textAlign:'center'}}>
+                <div style=${{fontSize:15,fontWeight:800,color:'#172B4D',fontFamily:'monospace'}}>${hovInfo.pts}</div>
+                <div style=${{fontSize:9,color:'#6B778C',marginTop:1,textTransform:'uppercase',letterSpacing:'0.04em'}}>Total pt</div>
               </div>
               ${sprint.state==='active' && html`
-                <div style=${{flex:1,background:'rgba(255,255,255,0.06)',borderRadius:4,padding:'5px 8px',textAlign:'center'}}>
-                  <div style=${{fontSize:15,fontWeight:800,color:'#00875A',fontFamily:'monospace'}}>${hovInfo.done}</div>
-                  <div style=${{fontSize:9,color:'rgba(255,255,255,0.45)',marginTop:1}}>DONE PT</div>
+                <div style=${{flex:1,background:'#F4F5F7',borderRadius:4,padding:'5px 8px',textAlign:'center'}}>
+                  <div style=${{fontSize:15,fontWeight:800,color:'#006644',fontFamily:'monospace'}}>${hovInfo.done}</div>
+                  <div style=${{fontSize:9,color:'#6B778C',marginTop:1,textTransform:'uppercase',letterSpacing:'0.04em'}}>Done pt</div>
                 </div>
-                <div style=${{flex:1,background:'rgba(255,255,255,0.06)',borderRadius:4,padding:'5px 8px',textAlign:'center'}}>
-                  <div style=${{fontSize:15,fontWeight:800,color:'#4C9AFF',fontFamily:'monospace'}}>${hovInfo.pts>0?Math.round((hovInfo.done/hovInfo.pts)*100):0}%</div>
-                  <div style=${{fontSize:9,color:'rgba(255,255,255,0.45)',marginTop:1}}>COMPLETE</div>
+                <div style=${{flex:1,background:'#F4F5F7',borderRadius:4,padding:'5px 8px',textAlign:'center'}}>
+                  <div style=${{fontSize:15,fontWeight:800,color:'#0052CC',fontFamily:'monospace'}}>${hovInfo.pts>0?Math.round((hovInfo.done/hovInfo.pts)*100):0}%</div>
+                  <div style=${{fontSize:9,color:'#6B778C',marginTop:1,textTransform:'uppercase',letterSpacing:'0.04em'}}>Complete</div>
                 </div>`}
             </div>
 
             <!-- Stories list -->
             ${hovInfo.stories.length > 0 && html`
-              <div style=${{borderTop:'1px solid rgba(255,255,255,0.1)',paddingTop:8}}>
-                <div style=${{fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.35)',letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:6}}>Stories in sprint</div>
-                <div style=${{display:'flex',flexDirection:'column',gap:5}}>
+              <div style=${{borderTop:'1px solid #EBECF0',paddingTop:8}}>
+                <div style=${{fontSize:9,fontWeight:700,color:'#6B778C',letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:6}}>Stories in sprint</div>
+                <div style=${{display:'flex',flexDirection:'column',gap:6}}>
                   ${hovInfo.stories.map(s => html`
                     <div key=${s.key} style=${{display:'flex',alignItems:'flex-start',gap:7}}>
                       <div style=${{width:6,height:6,borderRadius:'50%',background:STORY_DOT[s.status]||'#6B778C',flexShrink:0,marginTop:3}}/>
                       <div style=${{flex:1,minWidth:0}}>
-                        <div style=${{fontSize:10,color:'rgba(255,255,255,0.85)',lineHeight:1.35,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>${s.title}</div>
+                        <div style=${{fontSize:10,color:'#172B4D',lineHeight:1.4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>${s.title}</div>
                         <div style=${{display:'flex',alignItems:'center',gap:5,marginTop:2}}>
-                          <span style=${{fontSize:9,color:'rgba(255,255,255,0.35)',fontFamily:'monospace'}}>${s.key}</span>
-                          <span style=${{fontSize:9,color:STORY_DOT[s.status]||'#6B778C'}}>${s.status}</span>
+                          <span style=${{fontSize:9,color:'#97A0AF',fontFamily:'monospace'}}>${s.key}</span>
+                          <span style=${{fontSize:9,color:STORY_DOT[s.status]||'#6B778C',fontWeight:600}}>${s.status}</span>
                         </div>
                       </div>
-                      <span style=${{fontSize:9,color:'rgba(255,255,255,0.4)',fontFamily:'monospace',flexShrink:0,marginTop:1}}>${s.pts}pt</span>
+                      <span style=${{fontSize:9,color:'#6B778C',fontFamily:'monospace',flexShrink:0,marginTop:1}}>${s.pts}pt</span>
                     </div>`)}
                 </div>
               </div>`}
