@@ -1009,7 +1009,7 @@ function TeamLoadMap({selTeams, sprintId}) {
       </div>
 
       <!-- Treemap -->
-      <div style=${{flex:1,position:'relative',minHeight:0,overflow:'hidden',borderRadius:6,background:'#FFFFFF'}}>
+      <div style=${{flex:1,position:'relative',minHeight:0,overflow:'hidden',borderRadius:6,background:'transparent'}}>
         ${teamCells.map(cell => {
           const devItems = [...cell.td.members]
             .sort((a,b) => b.pts - a.pts)
