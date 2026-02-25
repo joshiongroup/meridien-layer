@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "meridien-html",
+      "runtimeExecutable": "/usr/bin/python3",
+      "runtimeArgs": ["/tmp/meridien-serve.py"],
+      "port": 4200
+    },
+    {
+      "name": "meridien-electron",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start"],
+      "port": 5173
+    }
+  ]
+}
