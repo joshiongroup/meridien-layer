@@ -1125,11 +1125,12 @@ function TeamLoadMap({selTeams, sprintId}) {
                       onMouseLeave=${() => setHovInfo(null)}
                       style=${{
                         position:'absolute',
-                        left:'calc('+dc.x+'% + 2px)',
-                        top:'calc('+dc.y+'% + 2px)',
-                        width:'calc('+dc.w+'% - 4px)',
-                        height:'calc('+dc.h+'% - 4px)',
+                        left:'calc('+dc.x+'% + 4px)',
+                        top:'calc('+dc.y+'% + 4px)',
+                        width:'calc('+dc.w+'% - 8px)',
+                        height:'calc('+dc.h+'% - 8px)',
                         background:bg,
+                        borderRadius:8,
                         overflow:'hidden',
                         display:'flex',
                         flexDirection:'column',
