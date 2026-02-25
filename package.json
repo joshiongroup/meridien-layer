@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite-electron-preview",
     "start": "electron-vite dev",
-    "build": "electron-vite build",
-    "build:web": "mkdir -p public && cp meridien-layer.html public/index.html",
+    "build": "mkdir -p public && cp meridien-layer.html public/index.html",
+    "build:electron": "electron-vite build",
     "preview": "electron-vite preview"
   },
   "dependencies": {
