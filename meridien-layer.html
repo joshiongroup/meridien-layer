@@ -1031,26 +1031,17 @@ function TeamLoadMap({selTeams, sprintId}) {
               }}>
               <!-- Team header strip -->
               <div style=${{
-                position:'absolute',top:0,left:0,right:0,height:36,zIndex:2,
+                position:'absolute',top:0,left:0,right:0,height:28,zIndex:2,
                 background:cell.color+'DD',
                 display:'flex',alignItems:'center',justifyContent:'space-between',
-                padding:'0 10px',gap:8,
+                padding:'0 10px',
               }}>
-                <div style=${{display:'flex',alignItems:'center',gap:7,minWidth:0}}>
-                  <div style=${{
-                    width:22,height:22,borderRadius:'50%',flexShrink:0,
-                    background:'rgba(255,255,255,0.25)',
-                    border:'1.5px solid rgba(255,255,255,0.6)',
-                    display:'flex',alignItems:'center',justifyContent:'center',
-                    fontSize:9,fontWeight:800,color:'white',letterSpacing:'0.02em',
-                  }}>${cell.name.split(' ').map(w=>w[0]).join('')}</div>
-                  <span style=${{fontSize:11,fontWeight:700,color:'white',whiteSpace:'nowrap',textShadow:'0 1px 2px rgba(0,0,0,0.4)',overflow:'hidden',textOverflow:'ellipsis'}}>${cell.name}</span>
-                </div>
-                <span style=${{fontSize:10,color:'rgba(255,255,255,0.85)',whiteSpace:'nowrap',flexShrink:0}}>${cell.td.total}pt · ${cell.td.members.length}👤</span>
+                <span style=${{fontSize:11,fontWeight:700,color:'white',whiteSpace:'nowrap',textShadow:'0 1px 2px rgba(0,0,0,0.5)'}}>${cell.name}</span>
+                <span style=${{fontSize:10,color:'rgba(255,255,255,0.8)',whiteSpace:'nowrap',textShadow:'0 1px 2px rgba(0,0,0,0.5)'}}>${cell.td.total}pt · ${cell.td.members.length}👤</span>
               </div>
 
               <!-- Developer treemap cells -->
-              <div style=${{position:'absolute',top:36,left:0,right:0,bottom:0}}>
+              <div style=${{position:'absolute',top:28,left:0,right:0,bottom:0}}>
                 ${devCells.map(dc => {
                   const bg = heatColor(dc.status, dc.pts);
                   const showLabel = dc.w > 12 && dc.h > 14;
@@ -1068,24 +1059,23 @@ function TeamLoadMap({selTeams, sprintId}) {
                         top:'calc('+dc.y+'% + 2px)',
                         width:'calc('+dc.w+'% - 4px)',
                         height:'calc('+dc.h+'% - 4px)',
-                        background:'#FFFFFF',
-                        borderLeft:'4px solid '+bg,
+                        background:bg,
                         overflow:'hidden',
                         display:'flex',
                         flexDirection:'column',
                         alignItems:'center',
                         justifyContent:'center',
                         cursor:'default',
-                        transition:'background .15s',
+                        transition:'filter .15s',
                       }}
-                      onMouseOver=${e=>{e.currentTarget.style.background='#F4F5F7'}}
-                      onMouseOut=${e=>{e.currentTarget.style.background='#FFFFFF'}}>
+                      onMouseOver=${e=>{e.currentTarget.style.filter='brightness(1.25)'}}
+                      onMouseOut=${e=>{e.currentTarget.style.filter='brightness(1)'}}>
                       ${showLabel && html`
-                        <span style=${{fontSize:showFull?11:10,fontWeight:700,color:'#172B4D',lineHeight:1.2,textAlign:'center',padding:'0 4px'}}>
+                        <span style=${{fontSize:showFull?11:10,fontWeight:700,color:'rgba(255,255,255,0.95)',lineHeight:1.2,textAlign:'center',padding:'0 2px',textShadow:'0 1px 3px rgba(0,0,0,0.5)'}}>
                           ${showFull ? dc.n.split(' ')[0] : dc.av}
                         </span>`}
                       ${showPts && html`
-                        <span style=${{fontSize:9,color:'#6B778C',lineHeight:1.2}}>
+                        <span style=${{fontSize:9,color:'rgba(255,255,255,0.75)',lineHeight:1.2,textShadow:'0 1px 2px rgba(0,0,0,0.5)'}}>
                           ${dc.pts}pt${pctDone!==null?' · '+pctDone+'%':''}
                         </span>`}
                       ${sprint.state==='active' && dc.done>0 && dc.w>16 && dc.h>16 && html`
@@ -1093,8 +1083,7 @@ function TeamLoadMap({selTeams, sprintId}) {
                           position:'absolute',bottom:0,left:0,
                           height:3,
                           width:Math.min(100,(dc.done/dc.pts)*100)+'%',
-                          background:bg,
-                          opacity:0.5,
+                          background:'rgba(255,255,255,0.5)',
                           borderRadius:'0 1px 0 0',
                         }}/>`}
                     </div>`;
